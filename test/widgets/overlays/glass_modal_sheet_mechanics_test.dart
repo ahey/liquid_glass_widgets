@@ -97,6 +97,41 @@ void main() {
       final pos = SheetGeometry.positionFor(SheetState.full, screen.height);
       expect(pos, closeTo((screen.height - 90) / screen.height, 0.001));
     });
+
+    test('large-only full can resolve below default half height', () {
+      const geo = SheetGeometry(
+        mode: SheetMode.dismissible,
+        halfSize: 0.45,
+        fullSize: 180,
+        peekSize: 90,
+        detents: {GlassModalSheetDetent.large},
+        enablePeek: false,
+      );
+
+      expect(
+        geo.positionForState(SheetState.full, screen.height),
+        closeTo(180 / screen.height, 0.001),
+      );
+    });
+
+    test('medium and large clamp compact full requests to half', () {
+      const geo = SheetGeometry(
+        mode: SheetMode.dismissible,
+        halfSize: 0.45,
+        fullSize: 180,
+        peekSize: 90,
+        detents: {
+          GlassModalSheetDetent.medium,
+          GlassModalSheetDetent.large,
+        },
+        enablePeek: false,
+      );
+
+      expect(
+        geo.positionForState(SheetState.full, screen.height),
+        closeTo(0.45, 0.001),
+      );
+    });
   });
 
   // ── SheetGeometry.resolveTarget ───────────────────────────────────────────

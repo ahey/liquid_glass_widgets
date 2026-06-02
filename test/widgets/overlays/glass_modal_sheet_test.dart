@@ -84,6 +84,98 @@ void main() {
       expect(controller.currentState, SheetState.full);
     });
 
+    testWidgets('large-only fitFullSizeToContent uses measured content height',
+        (tester) async {
+      final controller = GlassModalSheetController();
+      final screenHeight =
+          tester.view.physicalSize.height / tester.view.devicePixelRatio;
+
+      await tester.pumpWidget(
+        createTestApp(
+          child: Stack(
+            children: [
+              GlassModalSheet(
+                controller: controller,
+                detents: const {GlassModalSheetDetent.large},
+                fitFullSizeToContent: true,
+                child: const SizedBox(height: 160, child: Text('Fitted')),
+              ),
+            ],
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(controller.currentState, SheetState.full);
+      expect(controller.value, closeTo(160 / screenHeight, 0.01));
+    });
+
+    testWidgets('fitFullSizeToContent respects explicit fullSize cap',
+        (tester) async {
+      final controller = GlassModalSheetController();
+      final screenHeight =
+          tester.view.physicalSize.height / tester.view.devicePixelRatio;
+
+      await tester.pumpWidget(
+        createTestApp(
+          child: Stack(
+            children: [
+              GlassModalSheet(
+                controller: controller,
+                detents: const {GlassModalSheetDetent.large},
+                fitFullSizeToContent: true,
+                fullSize: 180,
+                child: const SizedBox(height: 400, child: Text('Capped')),
+              ),
+            ],
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(controller.currentState, SheetState.full);
+      expect(controller.value, closeTo(180 / screenHeight, 0.01));
+    });
+
+    testWidgets('fitFullSizeToContent updates when content height changes',
+        (tester) async {
+      final controller = GlassModalSheetController();
+      final screenHeight =
+          tester.view.physicalSize.height / tester.view.devicePixelRatio;
+      double contentHeight = 120;
+
+      Future<void> pumpSheet() {
+        return tester.pumpWidget(
+          createTestApp(
+            child: Stack(
+              children: [
+                GlassModalSheet(
+                  controller: controller,
+                  detents: const {GlassModalSheetDetent.large},
+                  fitFullSizeToContent: true,
+                  child: SizedBox(
+                    height: contentHeight,
+                    child: const Text('Dynamic height'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+
+      await pumpSheet();
+      await tester.pumpAndSettle();
+      expect(controller.value, closeTo(120 / screenHeight, 0.01));
+
+      contentHeight = 240;
+      await pumpSheet();
+      await tester.pumpAndSettle();
+
+      expect(controller.currentState, SheetState.full);
+      expect(controller.value, closeTo(240 / screenHeight, 0.01));
+    });
+
     testWidgets('large-only native detent clamps half snaps to full',
         (tester) async {
       final controller = GlassModalSheetController();

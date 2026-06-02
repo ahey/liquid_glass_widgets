@@ -74,6 +74,7 @@ This is where you configure the physical shape-shifting "Apple Maps" effect.
 | :--- | :--- | :--- | :--- |
 | `halfSize` | `double` | `0.45` | `(x > 1.0 ? x / screenHeight : x)`. Resolves to absolute pixels if > 1.0, otherwise fraction. |
 | `fullSize` | `double?` | `null` | If `null`, defaults to `(screenHeight - 90) / screenHeight` to mimic iOS system page sheets. |
+| `fitFullSizeToContent` | `bool` | `false` | When true, the Full/Large target shrinks to the measured content height. `fullSize` becomes a maximum cap. |
 | `peekSize` | `double` | `90.0` | Minimum visible height. In `persistent` mode, this is the floor for all gestures. |
 | `horizontalMargin` | `double` | `8.0` | Base side margin. Lerps to `0.0` during the last 20% of the expansion to `full`. |
 | `peekHorizontalMargin`| `double?` | `null` | If provided, margin lerps from this value to `horizontalMargin` during Peek→Half transition. |
@@ -406,6 +407,22 @@ GlassModalSheet.show(
   initialState: SheetState.half,
   mode: SheetMode.dismissible,
   builder: (context) => MyContent(),
+);
+```
+
+### 1a. Large Detent That Fits Content
+```dart
+GlassModalSheet.show(
+  context: context,
+  detents: const {GlassModalSheetDetent.large},
+  initialDetent: GlassModalSheetDetent.large,
+  fitFullSizeToContent: true,
+  builder: (context) => const Column(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Text('Compact modal content'),
+    ],
+  ),
 );
 ```
 

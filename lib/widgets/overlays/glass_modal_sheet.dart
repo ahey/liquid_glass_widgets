@@ -4,6 +4,7 @@ import 'dart:ui';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/physics.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 
 import '../../src/renderer/liquid_glass_renderer.dart';
@@ -43,6 +44,13 @@ class GlassModalSheet extends StatefulWidget {
   /// - If value > 1.0: Treated as absolute pixels.
   /// - If null: Defaults to screen height minus 90px (iOS Page Sheet style).
   final double? fullSize;
+
+  /// Whether the 'full' state should shrink to the measured content height.
+  ///
+  /// When true, [fullSize] is treated as a maximum cap. The large native detent
+  /// still maps to [SheetState.full]; only the full state's height target
+  /// changes.
+  final bool fitFullSizeToContent;
 
   /// Height in the 'peek' state. Default: 90.0.
   final double peekSize;
@@ -214,6 +222,7 @@ class GlassModalSheet extends StatefulWidget {
     required this.child,
     this.halfSize = 0.45,
     this.fullSize,
+    this.fitFullSizeToContent = false,
     this.initialState = SheetState.half,
     this.detents,
     this.initialDetent,
@@ -268,6 +277,7 @@ class GlassModalSheet extends StatefulWidget {
     required WidgetBuilder builder,
     double halfSize = 0.45,
     double? fullSize,
+    bool fitFullSizeToContent = false,
     SheetState initialState = SheetState.half,
     Set<GlassModalSheetDetent>? detents,
     GlassModalSheetDetent? initialDetent,
@@ -353,6 +363,7 @@ class GlassModalSheet extends StatefulWidget {
           controller: effectiveController,
           halfSize: halfSize,
           fullSize: fullSize,
+          fitFullSizeToContent: fitFullSizeToContent,
           initialState: initialState,
           detents: detents,
           initialDetent: initialDetent,

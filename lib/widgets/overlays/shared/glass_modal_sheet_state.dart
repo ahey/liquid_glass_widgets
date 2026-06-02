@@ -8,6 +8,8 @@ class _GlassModalSheetState extends State<GlassModalSheet>
   late Animation<double> _saturationAnimation;
 
   // ── State ─────────────────────────────────────────────────────────────────
+  static const double _contentHeightEpsilon = 0.5;
+
   late final ValueNotifier<SheetState> _currentStateNotifier;
   SheetState get _currentState => _currentStateNotifier.value;
   set _currentState(SheetState v) => _currentStateNotifier.value = v;
@@ -32,6 +34,7 @@ class _GlassModalSheetState extends State<GlassModalSheet>
 
   double _currentPosition = 0.0;
   double _currentEffectiveHeight = 0.0;
+  double? _measuredContentHeight;
 
   FrozenState? _frozenState;
   Size _lastPhysicalSize = Size.zero;
@@ -97,7 +100,8 @@ class _GlassModalSheetState extends State<GlassModalSheet>
     // Hot Reload reaction: if dimensions changed, force position recalculation
     if (oldGeometry.halfSize != _geometry.halfSize ||
         oldGeometry.fullSize != _geometry.fullSize ||
-        oldGeometry.detents != _geometry.detents) {
+        oldGeometry.detents != _geometry.detents ||
+        oldWidget.fitFullSizeToContent != widget.fitFullSizeToContent) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted && _gestureArena.phase == GesturePhase.idle) {
           _snapToState(_currentState, animate: true);
@@ -127,6 +131,7 @@ class _GlassModalSheetState extends State<GlassModalSheet>
     if (_lastPhysicalSize != view.physicalSize) {
       if (_lastPhysicalSize != Size.zero) {
         _updateScreenSize();
+        _geometry = _buildGeometry();
         _snapToState(_currentState, animate: true);
       }
       _lastPhysicalSize = view.physicalSize;
@@ -146,11 +151,61 @@ class _GlassModalSheetState extends State<GlassModalSheet>
     return SheetGeometry(
       mode: widget.mode,
       halfSize: widget.halfSize,
-      fullSize: widget.fullSize,
+      fullSize: _effectiveFullSize,
       peekSize: widget.peekSize,
       enablePeek: widget.enablePeek ?? (widget.mode == SheetMode.persistent),
       detents: widget.detents,
     );
+  }
+
+  double? get _effectiveFullSize {
+    if (!widget.fitFullSizeToContent) return widget.fullSize;
+
+    final measuredHeight = _measuredContentHeight;
+    if (measuredHeight == null || measuredHeight <= 0) {
+      return widget.fullSize;
+    }
+
+    final screenHeight = MediaQuery.sizeOf(context).height;
+    final cap = _fullSizeCap(screenHeight);
+    return measuredHeight.clamp(0.0, cap).toDouble();
+  }
+
+  double _fullSizeCap(double screenHeight) {
+    final configuredFullSize = widget.fullSize;
+    if (configuredFullSize == null) {
+      return (screenHeight - 90.0).clamp(0.0, double.infinity).toDouble();
+    }
+    if (configuredFullSize > 1.0) {
+      return configuredFullSize;
+    }
+    return (configuredFullSize * screenHeight)
+        .clamp(0.0, double.infinity)
+        .toDouble();
+  }
+
+  void _handleContentHeightChanged(double height) {
+    if (!mounted || !widget.fitFullSizeToContent) return;
+
+    final previousHeight = _measuredContentHeight;
+    if (previousHeight != null &&
+        (previousHeight - height).abs() <= _contentHeightEpsilon) {
+      return;
+    }
+
+    final wasUnmeasured = previousHeight == null;
+    final oldGeometry = _geometry;
+    setState(() {
+      _measuredContentHeight = height;
+      _geometry = _buildGeometry();
+    });
+
+    if (oldGeometry.fullSize == _geometry.fullSize ||
+        _gestureArena.phase != GesturePhase.idle) {
+      return;
+    }
+
+    _snapToState(_currentState, animate: !wasUnmeasured);
   }
 
   void _updateScreenSize() {
@@ -413,12 +468,20 @@ class _GlassModalSheetState extends State<GlassModalSheet>
   // ════════════════════════════════════════════════════════════════════════
 
   double get _expandProgress {
-    final halfPos =
-        _geometry.positionForState(SheetState.half, _screenSize.height);
-    final fullPos =
-        _geometry.positionForState(SheetState.full, _screenSize.height);
-    if (fullPos <= halfPos) return 0.0;
-    return ((_currentPosition - halfPos) / (fullPos - halfPos)).clamp(0.0, 1.0);
+    final screenHeight = _screenSize.height;
+    if (screenHeight <= 0) return 0.0;
+
+    final availableStates = _geometry.availableStates;
+    final lowerState = availableStates.contains(SheetState.half)
+        ? SheetState.half
+        : _geometry.minState;
+    final lowerPos = _geometry.positionForState(lowerState, screenHeight);
+    final fullPos = _geometry.positionForState(SheetState.full, screenHeight);
+    if (fullPos <= lowerPos) {
+      return _currentState == SheetState.full ? 1.0 : 0.0;
+    }
+    return ((_currentPosition - lowerPos) / (fullPos - lowerPos))
+        .clamp(0.0, 1.0);
   }
 
   bool get _usesOnlyNativeLargeDetent {
@@ -488,7 +551,15 @@ class _GlassModalSheetState extends State<GlassModalSheet>
 
     Color currentExpandedColor;
 
-    if (pos < halfPos) {
+    final hasHalfState = _geometry.availableStates.contains(SheetState.half);
+    final usesCompactFullWithoutHalf = !hasHalfState && fullPos < halfPos;
+    final isBeforeFullRange =
+        pos < (usesCompactFullWithoutHalf ? fullPos : halfPos);
+    final fullTransitionStartPos = hasHalfState
+        ? halfPos
+        : _geometry.positionForState(_geometry.minState, mqHeight);
+
+    if (isBeforeFullRange) {
       final range = halfPos - peekPos;
       final tProgress =
           range > 0.0001 ? ((pos - peekPos) / range).clamp(0.0, 1.0) : 1.0;
@@ -569,7 +640,7 @@ class _GlassModalSheetState extends State<GlassModalSheet>
     // ════════════════════════════════════════════════════════════════════════
     // Peek to Half Morphing
     // ════════════════════════════════════════════════════════════════════════
-    if (pos < halfPos) {
+    if (isBeforeFullRange) {
       final range = halfPos - peekPos;
       final tProgressRaw =
           range > 0.0001 ? ((pos - peekPos) / range).clamp(0.0, 1.0) : 1.0;
@@ -626,9 +697,11 @@ class _GlassModalSheetState extends State<GlassModalSheet>
         effectiveHeight = targetVisualHeight - effectiveBottom;
       } else {
         // Dismissible mode: hiding downwards
-        final pivotPos = _geometry.enablePeek
-            ? _geometry.positionForState(SheetState.peek, mqHeight)
-            : halfPos;
+        final pivotPos = usesCompactFullWithoutHalf
+            ? fullPos
+            : (_geometry.enablePeek
+                ? _geometry.positionForState(SheetState.peek, mqHeight)
+                : halfPos);
 
         final pivotVisualHeight = pivotPos * mqHeight;
 
@@ -654,7 +727,7 @@ class _GlassModalSheetState extends State<GlassModalSheet>
       }
     } else {
       // From half to full
-      final halfVisualHeight = halfPos * mqHeight;
+      final halfVisualHeight = fullTransitionStartPos * mqHeight;
       final frozenScale = _frozenState?.bottomScale ?? 1.0;
 
       final halfPhysicalHeight = halfVisualHeight - widget.bottomMargin;
@@ -865,6 +938,9 @@ class _GlassModalSheetState extends State<GlassModalSheet>
           enableSaturationGlow: widget.enableSaturationGlow,
           enableTopFade: widget.enableTopFade,
           topFadeHeight: widget.topFadeHeight,
+          fitFullSizeToContent: widget.fitFullSizeToContent,
+          contentHeightCap: _fullSizeCap(mqHeight),
+          onContentHeightChanged: _handleContentHeightChanged,
           onFocusGained: () {
             final target = _geometry.maxState;
             if (_currentState != target) {

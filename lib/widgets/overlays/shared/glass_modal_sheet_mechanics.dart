@@ -146,9 +146,13 @@ class SheetGeometry {
         mode: mode, halfSize: halfSize, fullSize: fullSize, peekSize: peekSize);
 
     // Cascade constraint: ensure order hidden <= peek <= half <= full
+    final states = availableStates;
     final safePeek = peekPos.clamp(hiddenPos, 1.0);
     final safeHalf = halfPos.clamp(safePeek, 1.0);
-    final safeFull = fullPos.clamp(safeHalf, 1.0);
+    final fullLowerBound = states.contains(SheetState.half)
+        ? safeHalf
+        : (states.contains(SheetState.peek) ? safePeek : hiddenPos);
+    final safeFull = fullPos.clamp(fullLowerBound, 1.0);
 
     switch (state) {
       case SheetState.hidden:

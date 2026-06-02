@@ -33,6 +33,9 @@ class _SheetLayout extends StatelessWidget {
   final Color? dragIndicatorColor;
   final double dragIndicatorWidth;
   final EdgeInsetsGeometry? padding;
+  final bool fitFullSizeToContent;
+  final double contentHeightCap;
+  final ValueChanged<double>? onContentHeightChanged;
   final bool maintainContentGlass;
   final LiquidGlassSettings? fullStateContentSettings;
   final bool enableTopFade;
@@ -74,6 +77,9 @@ class _SheetLayout extends StatelessWidget {
     this.dragIndicatorColor,
     required this.dragIndicatorWidth,
     this.padding,
+    required this.fitFullSizeToContent,
+    required this.contentHeightCap,
+    this.onContentHeightChanged,
     required this.maintainContentGlass,
     this.fullStateContentSettings,
     required this.enableTopFade,
@@ -91,6 +97,9 @@ class _SheetLayout extends StatelessWidget {
       scrollController: scrollController,
       isFullScreen: expandProgressValue > 0.95,
       padding: padding,
+      fitFullSizeToContent: fitFullSizeToContent,
+      contentHeightCap: contentHeightCap,
+      onContentHeightChanged: onContentHeightChanged,
       child: child,
     );
 
@@ -390,26 +399,131 @@ class _SheetContent extends StatelessWidget {
   final ScrollController scrollController;
   final bool isFullScreen;
   final EdgeInsetsGeometry? padding;
+  final bool fitFullSizeToContent;
+  final double contentHeightCap;
+  final ValueChanged<double>? onContentHeightChanged;
 
   const _SheetContent({
     required this.child,
     required this.scrollController,
     required this.isFullScreen,
     this.padding,
+    required this.fitFullSizeToContent,
+    required this.contentHeightCap,
+    this.onContentHeightChanged,
   });
 
   @override
   Widget build(BuildContext context) {
+    Widget content = Padding(
+      padding: padding ?? EdgeInsets.zero,
+      child: child,
+    );
+
+    if (fitFullSizeToContent) {
+      content = _ContentHeightReporter(
+        maxHeight: contentHeightCap,
+        onHeightChanged: onContentHeightChanged,
+        child: content,
+      );
+    }
+
     return ScrollControllerProvider(
       controller: scrollController,
       physics: isFullScreen
           ? const _ClampingTopScrollPhysics()
           : const NeverScrollableScrollPhysics(),
-      child: Padding(
-        padding: padding ?? EdgeInsets.zero,
-        child: child,
-      ),
+      child: content,
     );
+  }
+}
+
+class _ContentHeightReporter extends SingleChildRenderObjectWidget {
+  const _ContentHeightReporter({
+    required this.maxHeight,
+    required this.onHeightChanged,
+    required super.child,
+  });
+
+  final double maxHeight;
+  final ValueChanged<double>? onHeightChanged;
+
+  @override
+  RenderObject createRenderObject(BuildContext context) {
+    return _RenderContentHeightReporter(
+      maxHeight: maxHeight,
+      onHeightChanged: onHeightChanged,
+    );
+  }
+
+  @override
+  void updateRenderObject(
+    BuildContext context,
+    _RenderContentHeightReporter renderObject,
+  ) {
+    renderObject
+      ..maxHeight = maxHeight
+      ..onHeightChanged = onHeightChanged;
+  }
+}
+
+class _RenderContentHeightReporter extends RenderProxyBox {
+  _RenderContentHeightReporter({
+    required double maxHeight,
+    required ValueChanged<double>? onHeightChanged,
+  })  : _maxHeight = maxHeight,
+        _onHeightChanged = onHeightChanged;
+
+  static const double _heightEpsilon = 0.5;
+
+  double _maxHeight;
+  ValueChanged<double>? _onHeightChanged;
+  double? _lastReportedHeight;
+
+  set maxHeight(double value) {
+    if (_maxHeight == value) return;
+    _maxHeight = value;
+    markNeedsLayout();
+  }
+
+  set onHeightChanged(ValueChanged<double>? value) {
+    _onHeightChanged = value;
+  }
+
+  @override
+  void performLayout() {
+    final width = constraints.hasBoundedWidth
+        ? constraints.maxWidth
+        : constraints.constrainWidth();
+    final height = constraints.hasBoundedHeight
+        ? constraints.maxHeight
+        : constraints.constrainHeight();
+
+    if (child != null) {
+      final childConstraints = BoxConstraints(
+        minWidth: width,
+        maxWidth: width,
+        minHeight: 0,
+        maxHeight: _maxHeight.clamp(0.0, double.infinity).toDouble(),
+      );
+      child!.layout(childConstraints, parentUsesSize: true);
+      _reportHeight(child!.size.height.clamp(0.0, _maxHeight).toDouble());
+    } else {
+      _reportHeight(0);
+    }
+
+    size = constraints.constrain(Size(width, height));
+  }
+
+  void _reportHeight(double height) {
+    final previous = _lastReportedHeight;
+    if (previous != null && (previous - height).abs() <= _heightEpsilon) {
+      return;
+    }
+    _lastReportedHeight = height;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _onHeightChanged?.call(height);
+    });
   }
 }
 
@@ -522,6 +636,11 @@ class GlassModalSheetScaffold extends StatelessWidget {
 
   /// Maximum sheet height in 'full' state. If null, defaults to screen height minus 90px.
   final double? fullSize;
+
+  /// Whether the 'full' state should shrink to the measured sheet content.
+  ///
+  /// When true, [fullSize] is treated as a maximum cap.
+  final bool fitFullSizeToContent;
 
   /// Initial state when the scaffold is first displayed.
   final SheetState initialState;
@@ -667,6 +786,7 @@ class GlassModalSheetScaffold extends StatelessWidget {
     required this.sheet,
     this.halfSize = 0.45,
     this.fullSize,
+    this.fitFullSizeToContent = false,
     this.initialState = SheetState.half,
     this.detents,
     this.initialDetent,
@@ -734,6 +854,7 @@ class GlassModalSheetScaffold extends StatelessWidget {
         GlassModalSheet(
           halfSize: halfSize,
           fullSize: fullSize,
+          fitFullSizeToContent: fitFullSizeToContent,
           initialState: initialState,
           detents: detents,
           initialDetent: initialDetent,

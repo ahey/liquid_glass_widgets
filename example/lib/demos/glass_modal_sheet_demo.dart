@@ -288,6 +288,14 @@ class _ShowcaseHomeScreenState extends State<ShowcaseHomeScreen> {
             ),
             const SizedBox(height: 16),
             _buildScenarioTile(
+              title: 'Large Fits Content',
+              description: 'Large detent sized to compact content',
+              icon: Icons.fit_screen_rounded,
+              onTap: () => _showNativeLargeFitContent(context),
+              color: Colors.greenAccent,
+            ),
+            const SizedBox(height: 16),
+            _buildScenarioTile(
               title: 'Native Medium + Large',
               description: 'iOS-style medium and large detents',
               icon: Icons.unfold_more_rounded,
@@ -678,6 +686,21 @@ class _ShowcaseHomeScreenState extends State<ShowcaseHomeScreen> {
     );
   }
 
+  void _showNativeLargeFitContent(BuildContext context) {
+    GlassModalSheet.show(
+      context: context,
+      quality: widget.currentQuality,
+      detents: const {GlassModalSheetDetent.large},
+      initialDetent: GlassModalSheetDetent.large,
+      fitFullSizeToContent: true,
+      fullSize: 420,
+      padding: const EdgeInsets.fromLTRB(20, 56, 20, 24),
+      builder: (context) => const GlassBackdropScope(
+        child: FitContentScenario(),
+      ),
+    );
+  }
+
   void _showNativeMediumLarge(BuildContext context) {
     GlassModalSheet.show(
       context: context,
@@ -980,6 +1003,66 @@ class MapsExperienceScreen extends StatelessWidget {
 // =============================================================================
 // Scenario Widgets
 // =============================================================================
+
+class FitContentScenario extends StatelessWidget {
+  const FitContentScenario({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Large Fits Content',
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'This uses the Large detent, but the sheet height is measured from this compact content instead of expanding to the page-sheet height.',
+          style: TextStyle(fontSize: 15, color: Colors.grey[400]),
+        ),
+        const SizedBox(height: 20),
+        Row(
+          children: [
+            Expanded(
+              child: GlassButton.custom(
+                height: 48,
+                useOwnLayer: false,
+                shape: const LiquidRoundedSuperellipse(borderRadius: 14),
+                onTap: () {},
+                child: const Center(child: Text('Primary')),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: GlassButton.custom(
+                height: 48,
+                useOwnLayer: false,
+                shape: const LiquidRoundedSuperellipse(borderRadius: 14),
+                onTap: () {},
+                child: const Center(child: Text('Secondary')),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 18),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: const [
+            GlassChip(label: 'fitFullSizeToContent'),
+            GlassChip(label: 'large detent'),
+            GlassChip(label: '420px cap'),
+          ],
+        ),
+      ],
+    );
+  }
+}
 
 /// A unified helper to build scenarios without boilerplate.
 class BaseScenario extends StatefulWidget {
