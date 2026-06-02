@@ -514,6 +514,12 @@ class GlassModalSheetScaffold extends StatelessWidget {
   /// Initial state when the scaffold is first displayed.
   final SheetState initialState;
 
+  /// Native iOS-style detents that the sheet may snap to.
+  final Set<GlassModalSheetDetent>? detents;
+
+  /// Initial native detent when [detents] is provided.
+  final GlassModalSheetDetent? initialDetent;
+
   /// Height in the 'peek' state. Default: 90.0.
   final double peekSize;
 
@@ -646,6 +652,8 @@ class GlassModalSheetScaffold extends StatelessWidget {
     this.halfSize = 0.45,
     this.fullSize,
     this.initialState = SheetState.half,
+    this.detents,
+    this.initialDetent,
     this.topBorderRadius,
     this.bottomBorderRadius,
     this.fullTopBorderRadius,
@@ -710,6 +718,8 @@ class GlassModalSheetScaffold extends StatelessWidget {
           halfSize: halfSize,
           fullSize: fullSize,
           initialState: initialState,
+          detents: detents,
+          initialDetent: initialDetent,
           topBorderRadius: topBorderRadius,
           bottomBorderRadius: bottomBorderRadius,
           fullTopBorderRadius: fullTopBorderRadius,

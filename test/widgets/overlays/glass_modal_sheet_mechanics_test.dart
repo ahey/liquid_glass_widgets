@@ -176,6 +176,115 @@ void main() {
       );
       expect(result, isA<SheetState>());
     });
+
+    test('large-only native detent skips half when snapping upward', () {
+      const largeOnlyGeo = SheetGeometry(
+        mode: SheetMode.dismissible,
+        halfSize: 0.45,
+        peekSize: 90,
+        detents: {GlassModalSheetDetent.large},
+        enablePeek: false,
+      );
+
+      expect(largeOnlyGeo.availableStates, [
+        SheetState.hidden,
+        SheetState.full,
+      ]);
+      expect(
+        largeOnlyGeo.resolveTarget(
+          snap(0.4, SheetState.hidden),
+          snapThreshold: 0.4,
+          velocityThreshold: 700,
+        ),
+        SheetState.full,
+      );
+    });
+
+    test('large-only native detent normalizes half to full on tall screens',
+        () {
+      const largeOnlyGeo = SheetGeometry(
+        mode: SheetMode.dismissible,
+        halfSize: 0.45,
+        peekSize: 90,
+        detents: {GlassModalSheetDetent.large},
+        enablePeek: false,
+      );
+
+      expect(
+        largeOnlyGeo.normalizeState(SheetState.half, 1200),
+        SheetState.full,
+      );
+    });
+
+    test('large-only native detent skips half when snapping downward', () {
+      const largeOnlyGeo = SheetGeometry(
+        mode: SheetMode.dismissible,
+        halfSize: 0.45,
+        peekSize: 90,
+        detents: {GlassModalSheetDetent.large},
+        enablePeek: false,
+      );
+
+      expect(
+        largeOnlyGeo.resolveTarget(
+          snap(0.3, SheetState.full, vel: -1500),
+          snapThreshold: 0.4,
+          velocityThreshold: 700,
+        ),
+        SheetState.hidden,
+      );
+    });
+
+    test('medium and large native detents preserve half and full', () {
+      const nativeGeo = SheetGeometry(
+        mode: SheetMode.dismissible,
+        halfSize: 0.45,
+        peekSize: 90,
+        detents: {GlassModalSheetDetent.medium, GlassModalSheetDetent.large},
+        enablePeek: false,
+      );
+
+      expect(nativeGeo.availableStates, [
+        SheetState.hidden,
+        SheetState.half,
+        SheetState.full,
+      ]);
+    });
+
+    test('medium-only native detent clamps full requests to half', () {
+      const mediumOnlyGeo = SheetGeometry(
+        mode: SheetMode.dismissible,
+        halfSize: 0.45,
+        peekSize: 90,
+        detents: {GlassModalSheetDetent.medium},
+        enablePeek: false,
+      );
+
+      expect(mediumOnlyGeo.availableStates, [
+        SheetState.hidden,
+        SheetState.half,
+      ]);
+      expect(
+        mediumOnlyGeo.normalizeState(SheetState.full, screen.height),
+        SheetState.half,
+      );
+    });
+
+    test('persistent large-only native detent uses peek and full', () {
+      const largeOnlyGeo = SheetGeometry(
+        mode: SheetMode.persistent,
+        halfSize: 0.45,
+        peekSize: 90,
+        detents: {GlassModalSheetDetent.large},
+        enablePeek: true,
+      );
+
+      expect(largeOnlyGeo.availableStates, [SheetState.peek, SheetState.full]);
+      expect(
+        largeOnlyGeo.normalizeState(SheetState.hidden, screen.height),
+        SheetState.peek,
+      );
+    });
   });
 
   // ── SheetGeometry.applyResistance ─────────────────────────────────────────

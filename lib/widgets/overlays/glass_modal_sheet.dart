@@ -52,6 +52,17 @@ class GlassModalSheet extends StatefulWidget {
   /// Initial state when the sheet is first shown.
   final SheetState initialState;
 
+  /// Native iOS-style detents that the sheet may snap to.
+  ///
+  /// When null, the legacy state graph is preserved. When provided, this set
+  /// controls whether the medium/half and large/full detents are reachable.
+  final Set<GlassModalSheetDetent>? detents;
+
+  /// Initial native detent when [detents] is provided.
+  ///
+  /// If non-null, this takes precedence over [initialState].
+  final GlassModalSheetDetent? initialDetent;
+
   // ===========================================================================
   // Appearance Properties
   // ===========================================================================
@@ -197,6 +208,8 @@ class GlassModalSheet extends StatefulWidget {
     this.halfSize = 0.45,
     this.fullSize,
     this.initialState = SheetState.half,
+    this.detents,
+    this.initialDetent,
     this.topBorderRadius = 56,
     this.bottomBorderRadius,
     this.fullTopBorderRadius = 46,
@@ -248,6 +261,8 @@ class GlassModalSheet extends StatefulWidget {
     double halfSize = 0.45,
     double? fullSize,
     SheetState initialState = SheetState.half,
+    Set<GlassModalSheetDetent>? detents,
+    GlassModalSheetDetent? initialDetent,
     double fillThreshold = 0.60,
     LiquidGlassSettings? settings,
     Color? expandedColor,
@@ -330,6 +345,8 @@ class GlassModalSheet extends StatefulWidget {
           halfSize: halfSize,
           fullSize: fullSize,
           initialState: initialState,
+          detents: detents,
+          initialDetent: initialDetent,
           fillThreshold: fillThreshold,
           settings: settings,
           expandedColor: expandedColor,

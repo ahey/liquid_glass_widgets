@@ -52,8 +52,10 @@ class _GlassModalSheetState extends State<GlassModalSheet>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
 
-    _currentStateNotifier = ValueNotifier(widget.initialState);
-    _settledState = widget.initialState;
+    final requestedInitialState =
+        widget.initialDetent?.sheetState ?? widget.initialState;
+    _currentStateNotifier = ValueNotifier(requestedInitialState);
+    _settledState = requestedInitialState;
     _geometry = _buildGeometry();
 
     _animationController = AnimationController.unbounded(vsync: this);
@@ -68,7 +70,13 @@ class _GlassModalSheetState extends State<GlassModalSheet>
       if (mounted) {
         _updateScreenSize();
         _lastPhysicalSize = View.of(context).physicalSize;
-        _snapToState(_currentState, animate: false);
+        final initialState = _geometry.normalizeState(
+          widget.initialDetent?.sheetState ?? widget.initialState,
+          MediaQuery.sizeOf(context).height,
+        );
+        _currentState = initialState;
+        _settledState = initialState;
+        _snapToState(initialState, animate: false);
       }
     });
 
@@ -88,7 +96,8 @@ class _GlassModalSheetState extends State<GlassModalSheet>
 
     // Hot Reload reaction: if dimensions changed, force position recalculation
     if (oldGeometry.halfSize != _geometry.halfSize ||
-        oldGeometry.fullSize != _geometry.fullSize) {
+        oldGeometry.fullSize != _geometry.fullSize ||
+        oldGeometry.detents != _geometry.detents) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted && _gestureArena.phase == GesturePhase.idle) {
           _snapToState(_currentState, animate: true);
@@ -124,13 +133,25 @@ class _GlassModalSheetState extends State<GlassModalSheet>
     }
   }
 
-  SheetGeometry _buildGeometry() => SheetGeometry(
-        mode: widget.mode,
-        halfSize: widget.halfSize,
-        fullSize: widget.fullSize,
-        peekSize: widget.peekSize,
-        enablePeek: widget.enablePeek ?? (widget.mode == SheetMode.persistent),
-      );
+  SheetGeometry _buildGeometry() {
+    assert(() {
+      if (widget.detents != null && widget.detents!.isEmpty) {
+        throw FlutterError(
+          'GlassModalSheet.detents must contain at least one detent.',
+        );
+      }
+      return true;
+    }());
+
+    return SheetGeometry(
+      mode: widget.mode,
+      halfSize: widget.halfSize,
+      fullSize: widget.fullSize,
+      peekSize: widget.peekSize,
+      enablePeek: widget.enablePeek ?? (widget.mode == SheetMode.persistent),
+      detents: widget.detents,
+    );
+  }
 
   void _updateScreenSize() {
     final view = View.of(context);
@@ -145,11 +166,8 @@ class _GlassModalSheetState extends State<GlassModalSheet>
       {bool animate = true, double velocity = 0}) {
     if (!mounted) return;
 
-    if (widget.mode == SheetMode.persistent && state == SheetState.hidden) {
-      state = SheetState.peek;
-    }
-
     final screenHeight = MediaQuery.sizeOf(context).height;
+    state = _geometry.normalizeState(state, screenHeight);
     final targetPosition = _geometry.positionForState(state, screenHeight);
 
     if (animate) {
@@ -403,6 +421,13 @@ class _GlassModalSheetState extends State<GlassModalSheet>
     return ((_currentPosition - halfPos) / (fullPos - halfPos)).clamp(0.0, 1.0);
   }
 
+  bool get _usesOnlyNativeLargeDetent {
+    final detents = widget.detents;
+    if (detents == null) return false;
+    return detents.isEmpty ||
+        (detents.length == 1 && detents.contains(GlassModalSheetDetent.large));
+  }
+
   _RenderMetrics _calculateMetrics({
     required double pos,
     required double t,
@@ -523,6 +548,12 @@ class _GlassModalSheetState extends State<GlassModalSheet>
         }
       }
       glassOpacity = 1.0 - colorOpacity;
+    }
+
+    if (_usesOnlyNativeLargeDetent && widget.fullSettings == null) {
+      currentExpandedColor = effectiveExpandedColor;
+      colorOpacity = 1.0;
+      glassOpacity = 0.0;
     }
 
     // Apply saturation glow pulse if enabled
@@ -736,8 +767,9 @@ class _GlassModalSheetState extends State<GlassModalSheet>
     // persists correctly without an external key.
     final focusBridge = Focus(
       onFocusChange: (hasFocus) {
-        if (hasFocus && _currentState != SheetState.full) {
-          _snapToState(SheetState.full);
+        final target = _geometry.maxState;
+        if (hasFocus && _currentState != target) {
+          _snapToState(target);
         }
       },
       child: widget.child,
@@ -755,9 +787,13 @@ class _GlassModalSheetState extends State<GlassModalSheet>
 
         // Snap to exact positions when not dragging
         if (_gestureArena.phase == GesturePhase.idle) {
-          if ((pos - halfPos).abs() < 0.002) pos = halfPos;
-          if ((pos - fullPos).abs() < 0.002) pos = fullPos;
-          if ((pos - minPos).abs() < 0.002) pos = minPos;
+          for (final state in _geometry.availableStates) {
+            final statePos = _geometry.positionForState(state, mqHeight);
+            if ((pos - statePos).abs() < 0.002) {
+              pos = statePos;
+              break;
+            }
+          }
         }
 
         _currentPosition = pos;
@@ -829,8 +865,9 @@ class _GlassModalSheetState extends State<GlassModalSheet>
           enableTopFade: widget.enableTopFade,
           topFadeHeight: widget.topFadeHeight,
           onFocusGained: () {
-            if (_currentState != SheetState.full) {
-              _snapToState(SheetState.full);
+            final target = _geometry.maxState;
+            if (_currentState != target) {
+              _snapToState(target);
             }
           },
           suppressInteractionOnChildren: widget.suppressInteractionOnChildren,

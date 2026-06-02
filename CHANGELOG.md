@@ -1,3 +1,16 @@
+# Unreleased
+
+## ✨ Feature — native-style `GlassModalSheet` detents
+
+`GlassModalSheet` now supports iOS-style detents via `GlassModalSheetDetent`,
+`detents`, and `initialDetent`. Apps can choose native-style large-only or
+medium+large detents while preserving the existing hidden/peek/half/full
+behavior when detents are omitted.
+
+Existing calls without `detents` remain backwards compatible.
+
+---
+
 # 0.13.0
 
 ## ✨ New — Anchor Stretch, Ambient Light, and Interaction Physics

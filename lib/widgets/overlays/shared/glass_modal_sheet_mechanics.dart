@@ -6,6 +6,25 @@ part of '../glass_modal_sheet.dart';
 
 enum SheetState { hidden, peek, half, full }
 
+enum GlassModalSheetDetent {
+  /// Native medium detent. Maps to [SheetState.half].
+  medium,
+
+  /// Native large detent. Maps to [SheetState.full].
+  large,
+}
+
+extension on GlassModalSheetDetent {
+  SheetState get sheetState {
+    switch (this) {
+      case GlassModalSheetDetent.medium:
+        return SheetState.half;
+      case GlassModalSheetDetent.large:
+        return SheetState.full;
+    }
+  }
+}
+
 enum SheetMode {
   /// Scenario 1: hidden ↔ half ↔ full
   /// Can swipe down from half to hidden. From full → half → hidden.
@@ -77,6 +96,7 @@ class SheetGeometry {
   final double? fullSize;
   final double peekSize;
   final bool enablePeek;
+  final Set<GlassModalSheetDetent>? detents;
 
   const SheetGeometry({
     required this.mode,
@@ -84,6 +104,7 @@ class SheetGeometry {
     this.fullSize,
     required this.peekSize,
     this.enablePeek = true,
+    this.detents,
   });
 
   static double positionFor(
@@ -141,7 +162,94 @@ class SheetGeometry {
     }
   }
 
-  SheetState get minState => enablePeek ? SheetState.peek : SheetState.hidden;
+  Set<GlassModalSheetDetent>? get _effectiveDetents {
+    if (detents == null) return null;
+    if (detents!.isEmpty) return {GlassModalSheetDetent.large};
+    return detents;
+  }
+
+  List<SheetState> get availableStates {
+    final nativeDetents = _effectiveDetents;
+
+    if (nativeDetents == null) {
+      final states = <SheetState>[];
+      if (!enablePeek && mode == SheetMode.dismissible) {
+        states.add(SheetState.hidden);
+      }
+      if (enablePeek) {
+        states.add(SheetState.peek);
+      }
+      states
+        ..add(SheetState.half)
+        ..add(SheetState.full);
+      return states;
+    }
+
+    final states = <SheetState>[];
+    if (mode == SheetMode.persistent || enablePeek) {
+      states.add(SheetState.peek);
+    } else {
+      states.add(SheetState.hidden);
+    }
+
+    if (nativeDetents.contains(GlassModalSheetDetent.medium)) {
+      states.add(SheetState.half);
+    }
+    if (nativeDetents.contains(GlassModalSheetDetent.large)) {
+      states.add(SheetState.full);
+    }
+
+    return states;
+  }
+
+  SheetState get minState => availableStates.first;
+  SheetState get maxState => availableStates.last;
+
+  SheetState normalizeState(SheetState state, double screenHeight) {
+    if (detents == null) {
+      if (mode == SheetMode.persistent && state == SheetState.hidden) {
+        return SheetState.peek;
+      }
+      return state;
+    }
+
+    final states = availableStates;
+    if (states.contains(state)) return state;
+
+    if (state == SheetState.half && states.contains(SheetState.full)) {
+      return SheetState.full;
+    }
+
+    if (state == SheetState.full && states.contains(SheetState.half)) {
+      return SheetState.half;
+    }
+
+    if (mode == SheetMode.persistent && state == SheetState.hidden) {
+      return states.contains(SheetState.peek) ? SheetState.peek : states.first;
+    }
+
+    final targetPos = positionForState(state, screenHeight);
+    var closest = states.first;
+    var minDistance =
+        (positionForState(closest, screenHeight) - targetPos).abs();
+
+    for (final candidate in states.skip(1)) {
+      final distance =
+          (positionForState(candidate, screenHeight) - targetPos).abs();
+      if (distance < minDistance) {
+        minDistance = distance;
+        closest = candidate;
+      }
+    }
+
+    return closest;
+  }
+
+  SheetState stateForInitialDetent(
+    GlassModalSheetDetent detent,
+    double screenHeight,
+  ) =>
+      normalizeState(detent.sheetState, screenHeight);
 
   /// Computes target state based on current position and velocity.
   SheetState resolveTarget(
@@ -150,15 +258,7 @@ class SheetGeometry {
     required double velocityThreshold,
   }) {
     // Build the ordered sequence of available states for the current mode
-    final List<SheetState> states = [];
-    if (!enablePeek && mode == SheetMode.dismissible) {
-      states.add(SheetState.hidden);
-    }
-    if (enablePeek) {
-      states.add(SheetState.peek);
-    }
-    states.add(SheetState.half);
-    states.add(SheetState.full);
+    final states = availableStates;
 
     final positions = states
         .map((s) => positionForState(s, current.screenSize.height))
@@ -171,7 +271,7 @@ class SheetGeometry {
       for (int i = 0; i < states.length - 1; i++) {
         if (current.position < positions[i + 1] - 0.001) return states[i + 1];
       }
-      return SheetState.full;
+      return states.last;
     }
     if (velocity < -velocityThreshold) {
       // Find the next state below current
@@ -232,7 +332,7 @@ class SheetGeometry {
     required double resistance,
   }) {
     final minPos = positionForState(minState, screenHeight);
-    final fullPos = positionForState(SheetState.full, screenHeight);
+    final fullPos = positionForState(maxState, screenHeight);
 
     if (rawPosition < minPos) {
       final overflow = minPos - rawPosition;
