@@ -1,3 +1,16 @@
+# Unreleased
+
+## ✨ Feature — native-style `GlassModalSheet` detents
+
+`GlassModalSheet` now supports iOS-style detents via `GlassModalSheetDetent`,
+`detents`, and `initialDetent`. Apps can choose native-style large-only or
+medium+large detents while preserving the existing hidden/peek/half/full
+behavior when detents are omitted.
+
+Existing calls without `detents` remain backwards compatible.
+
+---
+
 # 0.18.6
 
 ## 🐛 Fix: Glass widgets now honour app `ThemeMode`, not OS dark mode
@@ -838,7 +851,6 @@ capture lifecycle. Zero API changes, zero visual changes. All 2,050 tests passin
   to synchronous `picture.toImageSync(1, 1)`, matching the `LightweightLiquidGlass`
   pattern. Eliminates a 1-frame async initialization delay for a 1×1 transparent
   texture. Added `picture.dispose()` to prevent a minor leak.
-
 ---
 
 # 0.15.3

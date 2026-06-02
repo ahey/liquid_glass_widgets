@@ -62,6 +62,199 @@ void main() {
       expect(controller.currentState, SheetState.full);
     });
 
+    testWidgets('large-only native detent starts at full by default',
+        (tester) async {
+      final controller = GlassModalSheetController();
+
+      await tester.pumpWidget(
+        createTestApp(
+          child: Stack(
+            children: [
+              GlassModalSheet(
+                controller: controller,
+                detents: const {GlassModalSheetDetent.large},
+                child: const Text('Large only'),
+              ),
+            ],
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(controller.currentState, SheetState.full);
+    });
+
+    testWidgets('large-only native detent clamps half snaps to full',
+        (tester) async {
+      final controller = GlassModalSheetController();
+
+      await tester.pumpWidget(
+        createTestApp(
+          child: Stack(
+            children: [
+              GlassModalSheet(
+                controller: controller,
+                detents: const {GlassModalSheetDetent.large},
+                child: const Text('Large only'),
+              ),
+            ],
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      controller.snapToState(SheetState.half, animate: false);
+      await tester.pump();
+
+      expect(controller.currentState, SheetState.full);
+    });
+
+    testWidgets('large-only native detent keeps fill while dragged down',
+        (tester) async {
+      final controller = GlassModalSheetController();
+
+      await tester.pumpWidget(
+        createTestApp(
+          child: Stack(
+            children: [
+              GlassModalSheet(
+                controller: controller,
+                detents: const {GlassModalSheetDetent.large},
+                child: const Text('Large only'),
+              ),
+            ],
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      double fillAlpha() =>
+          (tester
+                  .widget<DecoratedBox>(
+                    find.byKey(const Key('glass_modal_sheet_fill')),
+                  )
+                  .decoration as BoxDecoration)
+              .color
+              ?.a ??
+          0.0;
+
+      expect(fillAlpha(), greaterThan(0.9));
+
+      controller.value = 0.75;
+      await tester.pump();
+      expect(fillAlpha(), greaterThan(0.9));
+
+      controller.value = 0.55;
+      await tester.pump();
+      expect(fillAlpha(), greaterThan(0.9));
+
+      controller.value = 0.30;
+      await tester.pump();
+      expect(fillAlpha(), greaterThan(0.9));
+    });
+
+    testWidgets('medium and large native detents keep threshold behavior',
+        (tester) async {
+      final controller = GlassModalSheetController();
+
+      await tester.pumpWidget(
+        createTestApp(
+          child: Stack(
+            children: [
+              GlassModalSheet(
+                controller: controller,
+                detents: const {
+                  GlassModalSheetDetent.medium,
+                  GlassModalSheetDetent.large,
+                },
+                initialDetent: GlassModalSheetDetent.large,
+                child: const Text('Medium and large'),
+              ),
+            ],
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      double fillAlpha() =>
+          (tester
+                  .widget<DecoratedBox>(
+                    find.byKey(const Key('glass_modal_sheet_fill')),
+                  )
+                  .decoration as BoxDecoration)
+              .color
+              ?.a ??
+          0.0;
+
+      expect(fillAlpha(), greaterThan(0.9));
+
+      controller.value = 0.55;
+      await tester.pump();
+      expect(fillAlpha(), lessThan(0.05));
+    });
+
+    testWidgets('native large detent respects explicit expandedColor',
+        (tester) async {
+      final controller = GlassModalSheetController();
+
+      await tester.pumpWidget(
+        createTestApp(
+          child: Stack(
+            children: [
+              GlassModalSheet(
+                controller: controller,
+                detents: const {GlassModalSheetDetent.large},
+                expandedColor: Colors.blue,
+                child: const Text('Large only'),
+              ),
+            ],
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      BoxDecoration fillDecoration() => tester
+          .widget<DecoratedBox>(
+            find.byKey(const Key('glass_modal_sheet_fill')),
+          )
+          .decoration as BoxDecoration;
+
+      controller.value = 0.75;
+      await tester.pump();
+
+      expect(fillDecoration().color?.a, greaterThan(0.9));
+      expect(
+        fillDecoration().color?.withValues(alpha: 1.0),
+        Colors.blue.withValues(alpha: 1.0),
+      );
+    });
+
+    testWidgets('initialDetent overrides initialState', (tester) async {
+      final controller = GlassModalSheetController();
+
+      await tester.pumpWidget(
+        createTestApp(
+          child: Stack(
+            children: [
+              GlassModalSheet(
+                controller: controller,
+                detents: const {
+                  GlassModalSheetDetent.medium,
+                  GlassModalSheetDetent.large,
+                },
+                initialState: SheetState.full,
+                initialDetent: GlassModalSheetDetent.medium,
+                child: const Text('Medium first'),
+              ),
+            ],
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(controller.currentState, SheetState.half);
+    });
+
     testWidgets(
         'child State is preserved across half↔full transitions (no GlobalObjectKey)',
         (tester) async {
@@ -128,6 +321,36 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Modal Content'), findsOneWidget);
+    });
+
+    testWidgets('show() displays large-only native detent sheet',
+        (tester) async {
+      final controller = GlassModalSheetController();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => ElevatedButton(
+                onPressed: () => GlassModalSheet.show(
+                  context: context,
+                  controller: controller,
+                  detents: const {GlassModalSheetDetent.large},
+                  builder: (context) => const Text('Large Modal Content'),
+                ),
+                child: const Text('Show Large'),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Show Large'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Large Modal Content'), findsOneWidget);
+      expect(controller.currentState, SheetState.full);
+      expect(controller.value, greaterThan(0.5));
     });
 
     testWidgets('respects custom border radius', (tester) async {

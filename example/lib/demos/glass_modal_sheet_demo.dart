@@ -280,6 +280,22 @@ class _ShowcaseHomeScreenState extends State<ShowcaseHomeScreen> {
           // Additional Scenarios for Standard Tab
           if (_selectedTab == 0) ...[
             _buildScenarioTile(
+              title: 'Native Large Detent',
+              description: 'iOS-style large-only sheet, no Half stop',
+              icon: Icons.vertical_align_top_rounded,
+              onTap: () => _showNativeLargeOnly(context),
+              color: Colors.blueAccent,
+            ),
+            const SizedBox(height: 16),
+            _buildScenarioTile(
+              title: 'Native Medium + Large',
+              description: 'iOS-style medium and large detents',
+              icon: Icons.unfold_more_rounded,
+              onTap: () => _showNativeMediumLarge(context),
+              color: Colors.lightBlue,
+            ),
+            const SizedBox(height: 16),
+            _buildScenarioTile(
               title: 'Static Modal',
               description: 'Disabled glow and window scaling',
               icon: Icons.block_flipped,
@@ -643,6 +659,40 @@ class _ShowcaseHomeScreenState extends State<ShowcaseHomeScreen> {
         title: 'Standard Experience',
         subtitle:
             'Explore how interactive glass elements behave inside a glass sheet.',
+      ),
+    );
+  }
+
+  void _showNativeLargeOnly(BuildContext context) {
+    GlassModalSheet.show(
+      context: context,
+      quality: widget.currentQuality,
+      detents: const {GlassModalSheetDetent.large},
+      builder: (context) => const GlassBackdropScope(
+        child: BaseScenario(
+          title: 'Native Large Detent',
+          subtitle:
+              'This sheet opens directly to Large and does not offer a Half stop.',
+        ),
+      ),
+    );
+  }
+
+  void _showNativeMediumLarge(BuildContext context) {
+    GlassModalSheet.show(
+      context: context,
+      quality: widget.currentQuality,
+      detents: const {
+        GlassModalSheetDetent.medium,
+        GlassModalSheetDetent.large,
+      },
+      initialDetent: GlassModalSheetDetent.medium,
+      builder: (context) => const GlassBackdropScope(
+        child: BaseScenario(
+          title: 'Native Medium + Large',
+          subtitle:
+              'This sheet starts at Medium and expands to Large, matching the native detent model.',
+        ),
       ),
     );
   }
