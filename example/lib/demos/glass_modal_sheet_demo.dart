@@ -676,12 +676,10 @@ class _ShowcaseHomeScreenState extends State<ShowcaseHomeScreen> {
       context: context,
       quality: widget.currentQuality,
       detents: const {GlassModalSheetDetent.large},
-      builder: (context) => const GlassBackdropScope(
-        child: BaseScenario(
-          title: 'Native Large Detent',
-          subtitle:
-              'This sheet opens directly to Large and does not offer a Half stop.',
-        ),
+      builder: (context) => const BaseScenario(
+        title: 'Native Large Detent',
+        subtitle:
+            'This sheet opens directly to Large and does not offer a Half stop.',
       ),
     );
   }
@@ -695,9 +693,7 @@ class _ShowcaseHomeScreenState extends State<ShowcaseHomeScreen> {
       fitFullSizeToContent: true,
       fullSize: 420,
       padding: const EdgeInsets.fromLTRB(20, 56, 20, 24),
-      builder: (context) => const GlassBackdropScope(
-        child: FitContentScenario(),
-      ),
+      builder: (context) => const FitContentScenario(),
     );
   }
 
@@ -710,12 +706,10 @@ class _ShowcaseHomeScreenState extends State<ShowcaseHomeScreen> {
         GlassModalSheetDetent.large,
       },
       initialDetent: GlassModalSheetDetent.medium,
-      builder: (context) => const GlassBackdropScope(
-        child: BaseScenario(
-          title: 'Native Medium + Large',
-          subtitle:
-              'This sheet starts at Medium and expands to Large, matching the native detent model.',
-        ),
+      builder: (context) => const BaseScenario(
+        title: 'Native Medium + Large',
+        subtitle:
+            'This sheet starts at Medium and expands to Large, matching the native detent model.',
       ),
     );
   }
