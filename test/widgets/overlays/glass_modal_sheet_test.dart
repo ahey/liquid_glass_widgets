@@ -1173,6 +1173,125 @@ void main() {
       // Actually, since we didn't trigger any pointer events, it's 0.0.
       // But the *conditional* should be true.
     });
+
+    group('full-state sink content inset', () {
+      // In the full state the sheet rect deliberately sinks
+      // safeArea + bottomRadius px below the physical screen bottom so its
+      // rounded bottom corners are hidden off-screen. The content zone must
+      // be inset by the same amount or bottom-anchored content renders in
+      // the invisible sunken strip.
+      const safeAreaBottom = 34.0;
+      const bottomRadius = 46.0;
+
+      Widget buildSheetChild(Widget child) {
+        return Column(
+          children: [
+            const Text('Top item'),
+            const Spacer(),
+            Container(
+              key: const Key('bottom_button'),
+              height: 48,
+              color: Colors.blue,
+              child: child,
+            ),
+          ],
+        );
+      }
+
+      testWidgets(
+          'bottom-anchored content stays above the physical screen bottom',
+          (tester) async {
+        addTearDown(tester.view.reset);
+        final dpr = tester.view.devicePixelRatio;
+        tester.view.padding = FakeViewPadding(bottom: safeAreaBottom * dpr);
+        tester.view.viewPadding =
+            FakeViewPadding(bottom: safeAreaBottom * dpr);
+        final screenHeight = tester.view.physicalSize.height / dpr;
+
+        await tester.pumpWidget(
+          createTestApp(
+            child: Stack(
+              children: [
+                GlassModalSheet(
+                  detents: const {GlassModalSheetDetent.large},
+                  initialDetent: GlassModalSheetDetent.large,
+                  initialState: SheetState.full,
+                  bottomBorderRadius: bottomRadius,
+                  child: buildSheetChild(const SizedBox.shrink()),
+                ),
+              ],
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final buttonRect =
+            tester.getRect(find.byKey(const Key('bottom_button')));
+        expect(buttonRect.bottom, lessThanOrEqualTo(screenHeight + 0.01),
+            reason:
+                'Bottom-anchored content must not render in the sunken strip '
+                'below the physical screen bottom while the sheet is full');
+        expect(buttonRect.top, greaterThan(0));
+      });
+
+      testWidgets(
+          'consumer keyboard padding keeps bottom content above the keyboard',
+          (tester) async {
+        addTearDown(tester.view.reset);
+        final dpr = tester.view.devicePixelRatio;
+        // iOS collapses padding.bottom to 0 while the keyboard is open, but
+        // viewPadding.bottom stays stable — the sink amount (and thus the
+        // content inset) must be derived from viewPadding.
+        tester.view.padding = FakeViewPadding.zero;
+        tester.view.viewPadding =
+            FakeViewPadding(bottom: safeAreaBottom * dpr);
+        tester.view.viewInsets = FakeViewPadding(bottom: 300 * dpr);
+        final screenHeight = tester.view.physicalSize.height / dpr;
+        final keyboardTop = screenHeight - 300;
+
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: ThemeData(
+              brightness: Brightness.dark,
+              scaffoldBackgroundColor: Colors.transparent,
+            ),
+            home: Scaffold(
+              backgroundColor: Colors.transparent,
+              resizeToAvoidBottomInset: false,
+              body: Stack(
+                children: [
+                  GlassModalSheet(
+                    detents: const {GlassModalSheetDetent.large},
+                    initialDetent: GlassModalSheetDetent.large,
+                    initialState: SheetState.full,
+                    bottomBorderRadius: bottomRadius,
+                    // Mimic consumer keyboard avoidance: pad the content by
+                    // the keyboard height, measured from the screen bottom.
+                    child: Builder(
+                      builder: (context) => Padding(
+                        padding: EdgeInsets.only(
+                          bottom: MediaQuery.viewInsetsOf(context).bottom,
+                        ),
+                        child: buildSheetChild(const SizedBox.shrink()),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final buttonRect =
+            tester.getRect(find.byKey(const Key('bottom_button')));
+        expect(buttonRect.bottom, lessThanOrEqualTo(keyboardTop + 0.01),
+            reason:
+                'Content padded by viewInsets.bottom must end at the keyboard '
+                'top edge — the sunken strip must not push it behind the '
+                'keyboard');
+      });
+    });
   });
 
   // ─────────────────────────────────────────────────────────────────────────────

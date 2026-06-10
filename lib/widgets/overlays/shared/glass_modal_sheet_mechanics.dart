@@ -491,6 +491,12 @@ class _RenderMetrics {
   final double topRadius;
   final double bottomRadius;
   final double hPad;
+
+  /// Bottom padding applied to the content zone so that content remains
+  /// fully on-screen while the sheet's glass rect sinks below the physical
+  /// screen bottom in the full state. Tracks only the sink (not slide-in
+  /// or dismiss offsets, which also push [effectiveBottom] negative).
+  final double contentBottomInset;
   final double colorOpacity;
   final double glassOpacity;
   final LiquidGlassSettings effectiveSettings;
@@ -505,6 +511,7 @@ class _RenderMetrics {
     required this.topRadius,
     required this.bottomRadius,
     required this.hPad,
+    required this.contentBottomInset,
     required this.colorOpacity,
     required this.glassOpacity,
     required this.effectiveSettings,

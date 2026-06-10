@@ -528,6 +528,7 @@ class _GlassModalSheetState extends State<GlassModalSheet>
     late double topRadius;
     late double bottomRadius;
     late double hPad;
+    var contentBottomInset = 0.0;
     late double colorOpacity;
     late double glassOpacity;
 
@@ -756,6 +757,13 @@ class _GlassModalSheetState extends State<GlassModalSheet>
       // Physical height adjusts so the top edge always stays at targetVisualHeight
       effectiveHeight = targetVisualHeight - effectiveBottom;
 
+      // The sink pushes the sheet rect extraHeight px below the physical
+      // screen bottom; pad the content by the same amount so it stays fully
+      // on-screen. Derived from sinkProgress rather than -effectiveBottom,
+      // because effectiveBottom is also hugely negative during slide-in and
+      // dismiss, where no inset is wanted.
+      contentBottomInset = lerpDouble(0.0, extraHeight, sinkProgress)!;
+
       hPad =
           lerpDouble(widget.horizontalMargin, 0.0, (t / 0.92).clamp(0.0, 1.0))!;
       // Independent lerp for top and bottom radii
@@ -781,6 +789,7 @@ class _GlassModalSheetState extends State<GlassModalSheet>
       topRadius: topRadius,
       bottomRadius: bottomRadius,
       hPad: hPad,
+      contentBottomInset: contentBottomInset,
       colorOpacity: colorOpacity,
       glassOpacity: glassOpacity,
       effectiveSettings: effectiveSettings,
@@ -806,7 +815,10 @@ class _GlassModalSheetState extends State<GlassModalSheet>
     );
     final mqSize = MediaQuery.sizeOf(context);
     final mqHeight = mqSize.height;
-    final mqPadding = MediaQuery.paddingOf(context);
+    // viewPadding (not padding): padding.bottom collapses to 0 while the
+    // keyboard is open on iOS, which would make extraHeight — and therefore
+    // the whole sunken sheet — jump by the safe-area height.
+    final mqViewPadding = MediaQuery.viewPaddingOf(context);
 
     final adaptive = GlassThemeHelpers.resolveAdaptiveRadius(context);
     final topRadiusBase = widget.topBorderRadius ?? adaptive;
@@ -817,7 +829,7 @@ class _GlassModalSheetState extends State<GlassModalSheet>
     final topRadiusFull = widget.fullTopBorderRadius ?? topRadiusBase;
     final bottomRadiusFull = widget.fullBottomBorderRadius ?? bottomRadiusBase;
 
-    final extraHeight = mqPadding.bottom + bottomRadiusBase;
+    final extraHeight = mqViewPadding.bottom + bottomRadiusBase;
 
     final baseSettings = GlassThemeHelpers.resolveSettings(
       context,
@@ -913,6 +925,7 @@ class _GlassModalSheetState extends State<GlassModalSheet>
           hPad: metrics.hPad,
           effectiveBottom: metrics.effectiveBottom,
           effectiveHeight: metrics.effectiveHeight,
+          contentBottomInset: metrics.contentBottomInset,
           topRadius: metrics.topRadius,
           bottomRadius: metrics.bottomRadius,
           showDragIndicator: widget.showDragIndicator,

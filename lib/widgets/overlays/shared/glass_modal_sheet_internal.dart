@@ -11,6 +11,7 @@ class _SheetLayout extends StatelessWidget {
   final double hPad;
   final double effectiveBottom;
   final double effectiveHeight;
+  final double contentBottomInset;
   final double topRadius;
   final double bottomRadius;
   final double colorOpacity;
@@ -55,6 +56,7 @@ class _SheetLayout extends StatelessWidget {
     required this.hPad,
     required this.effectiveBottom,
     required this.effectiveHeight,
+    required this.contentBottomInset,
     required this.topRadius,
     required this.bottomRadius,
     required this.colorOpacity,
@@ -93,14 +95,20 @@ class _SheetLayout extends StatelessWidget {
   Widget build(BuildContext context) {
     final handleZone = _SheetHandleZone(indicatorWidth: dragIndicatorWidth);
 
-    final contentZone = _SheetContent(
-      scrollController: scrollController,
-      isFullScreen: expandProgressValue > 0.95,
-      padding: padding,
-      fitFullSizeToContent: fitFullSizeToContent,
-      contentHeightCap: contentHeightCap,
-      onContentHeightChanged: onContentHeightChanged,
-      child: child,
+    // The sheet rect sinks below the physical screen bottom in the full
+    // state; inset the content by the sunken amount so its usable area
+    // still ends at the screen bottom.
+    final contentZone = Padding(
+      padding: EdgeInsets.only(bottom: contentBottomInset),
+      child: _SheetContent(
+        scrollController: scrollController,
+        isFullScreen: expandProgressValue > 0.95,
+        padding: padding,
+        fitFullSizeToContent: fitFullSizeToContent,
+        contentHeightCap: contentHeightCap,
+        onContentHeightChanged: onContentHeightChanged,
+        child: child,
+      ),
     );
 
     return Positioned(
