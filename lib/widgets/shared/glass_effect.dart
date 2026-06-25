@@ -10,6 +10,7 @@ import '../../src/renderer/liquid_glass_renderer.dart';
 import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
 import 'package:flutter/scheduler.dart';
 import '../../theme/glass_theme.dart';
+import '../../utils/glass_logging.dart';
 import '../../widgets/interactive/liquid_glass_scope.dart';
 import 'inherited_liquid_glass.dart';
 
@@ -107,9 +108,17 @@ class GlassEffect extends StatefulWidget {
       _cachedProgram = program;
 
       if (!kIsWeb) {
-        debugPrint('[GlassEffect] ✓ Shader precached (native)');
+        GlassLoggers.debugOnly(
+          GlassLoggers.shaders,
+          Level.FINE,
+          'GlassEffect shader precached (native)',
+        );
       } else {
-        debugPrint('[GlassEffect] ✓ Shader program loaded (web)');
+        GlassLoggers.debugOnly(
+          GlassLoggers.shaders,
+          Level.FINE,
+          'GlassEffect shader program loaded (web)',
+        );
       }
 
       // Create a 1x1 transparent dummy image to satisfy sampler index 0.
@@ -121,8 +130,14 @@ class GlassEffect extends StatefulWidget {
       final picture = recorder.endRecording();
       _dummyImage = picture.toImageSync(1, 1);
       picture.dispose();
-    } catch (e) {
-      debugPrint('[GlassEffect] Pre-warm failed: $e');
+    } catch (e, stackTrace) {
+      GlassLoggers.debugOnly(
+        GlassLoggers.shaders,
+        Level.FINE,
+        'GlassEffect pre-warm failed',
+        e,
+        stackTrace,
+      );
     } finally {
       _isPreparing = false;
     }
@@ -302,9 +317,15 @@ class _GlassEffectState extends State<GlassEffect>
       _lastCaptureSize = size;
       _lastCapturePosition = pos;
       setState(() {});
-    } catch (e) {
+    } catch (e, stackTrace) {
       assert(() {
-        debugPrint('[GlassEffect] toImageSync failed: $e');
+        GlassLoggers.debugOnly(
+          GlassLoggers.shaders,
+          Level.FINE,
+          'GlassEffect toImageSync failed',
+          e,
+          stackTrace,
+        );
         return true;
       }());
     }
@@ -332,9 +353,15 @@ class _GlassEffectState extends State<GlassEffect>
           _lastCapturePosition = pos;
         });
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       assert(() {
-        debugPrint('[GlassEffect] toImage (web) failed: $e');
+        GlassLoggers.debugOnly(
+          GlassLoggers.shaders,
+          Level.FINE,
+          'GlassEffect toImage (web) failed',
+          e,
+          stackTrace,
+        );
         return true;
       }());
     } finally {
@@ -360,8 +387,12 @@ class _GlassEffectState extends State<GlassEffect>
           // Always create a local shader instance for state isolation
           _localShader = GlassEffect._cachedProgram!.fragmentShader();
           if (!_loggedCreation) {
-            debugPrint(
-                '[GlassEffect] ✓ Created unique shader instance for ${widget.shape.runtimeType}');
+            GlassLoggers.debugOnly(
+              GlassLoggers.shaders,
+              Level.FINER,
+              'Created GlassEffect shader instance for '
+              '${widget.shape.runtimeType}',
+            );
             _loggedCreation = true;
           }
         });

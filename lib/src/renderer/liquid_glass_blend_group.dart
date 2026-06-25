@@ -9,6 +9,7 @@ import 'liquid_glass.dart';
 import 'liquid_glass_render_scope.dart';
 import 'rendering/liquid_glass_render_object.dart';
 import 'shaders.dart';
+import '../../utils/glass_logging.dart';
 import 'package:meta/meta.dart';
 
 /// A widget that groups multiple liquid glass shapes for blending.
@@ -331,8 +332,14 @@ class RenderLiquidGlassBlendGroup extends RenderLiquidGlassGeometry
             existingShape.shape != shapeData.shape) {
           anyShapeChangedInLayer = true;
         }
-      } catch (e) {
-        debugPrint('Failed to compute shape info: $e');
+      } catch (e, stackTrace) {
+        GlassLoggers.debugOnly(
+          GlassLoggers.render,
+          Level.FINE,
+          'Failed to compute shape info',
+          e,
+          stackTrace,
+        );
       }
     }
 

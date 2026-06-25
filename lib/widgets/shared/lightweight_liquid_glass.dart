@@ -3,11 +3,12 @@
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
-import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, visibleForTesting;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
 import '../../src/renderer/liquid_glass_renderer.dart';
+import '../../utils/glass_logging.dart';
 
 import 'inherited_liquid_glass.dart';
 
@@ -163,14 +164,26 @@ class LightweightLiquidGlass extends StatefulWidget {
       // On native platforms, create the shared shader instance
       if (!kIsWeb) {
         _sharedShader = program.fragmentShader();
-        debugPrint(
-            '[LightweightGlass] ✓ Shader precached (native shared mode)');
+        GlassLoggers.debugOnly(
+          GlassLoggers.shaders,
+          Level.FINE,
+          'LightweightGlass shader precached (native shared mode)',
+        );
       } else {
-        debugPrint(
-            '[LightweightGlass] ✓ Shader program loaded (web per-widget mode)');
+        GlassLoggers.debugOnly(
+          GlassLoggers.shaders,
+          Level.FINE,
+          'LightweightGlass shader program loaded (web per-widget mode)',
+        );
       }
-    } catch (e) {
-      debugPrint('[LightweightGlass] Pre-warm failed: $e');
+    } catch (e, stackTrace) {
+      GlassLoggers.debugOnly(
+        GlassLoggers.shaders,
+        Level.FINE,
+        'LightweightGlass pre-warm failed',
+        e,
+        stackTrace,
+      );
     } finally {
       _isPreparing = false;
     }
@@ -364,8 +377,12 @@ class _LightweightLiquidGlassState extends State<LightweightLiquidGlass>
         setState(() {
           _webShader = LightweightLiquidGlass._cachedProgram!.fragmentShader();
           if (!_loggedCreation) {
-            debugPrint(
-                '[LightweightGlass] ✓ Created web shader for ${widget.shape.runtimeType}');
+            GlassLoggers.debugOnly(
+              GlassLoggers.shaders,
+              Level.FINER,
+              'Created LightweightGlass web shader for '
+              '${widget.shape.runtimeType}',
+            );
             _loggedCreation = true;
           }
         });

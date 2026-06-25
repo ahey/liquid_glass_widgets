@@ -27,6 +27,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 
+import 'glass_logging.dart';
+
 /// Monitors raster frame durations and emits a developer warning when
 /// [GlassQuality.premium] surfaces are active and GPU budget is exceeded.
 ///
@@ -86,11 +88,13 @@ class GlassPerformanceMonitor {
     _running = true;
     _consecutiveOverBudget = 0;
     SchedulerBinding.instance.addTimingsCallback(_onFrameTimings);
-    if (kDebugMode) {
-      debugPrint('[LiquidGlass] PerformanceMonitor started '
-          '(budget: ${rasterBudget.inMilliseconds} ms, '
-          'threshold: $sustainedFrameThreshold frames)');
-    }
+    GlassLoggers.debugOnly(
+      GlassLoggers.performance,
+      Level.FINE,
+      'PerformanceMonitor started '
+      '(budget: ${rasterBudget.inMilliseconds} ms, '
+      'threshold: $sustainedFrameThreshold frames)',
+    );
   }
 
   /// Stops the monitor and detaches the frame callback.

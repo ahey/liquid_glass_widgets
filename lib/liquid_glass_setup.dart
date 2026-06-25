@@ -6,6 +6,7 @@ import 'theme/glass_theme.dart';
 import 'theme/glass_theme_data.dart';
 import 'types/glass_quality.dart';
 import 'utils/accessibility_config.dart' as glass_config;
+import 'utils/glass_logging.dart';
 import 'utils/glass_performance_monitor.dart';
 import 'src/renderer/liquid_glass_renderer.dart';
 import 'widgets/shared/glass_adaptive_scope.dart';
@@ -101,7 +102,11 @@ class LiquidGlassWidgets {
   static Future<void> initialize({
     bool enablePerformanceMonitor = true,
   }) async {
-    debugPrint('[LiquidGlass] Initializing library...');
+    GlassLoggers.debugOnly(
+      GlassLoggers.setup,
+      Level.FINE,
+      'Initializing library',
+    );
 
     // 1. Pre-warm shaders — prevents the "white flash" on first render.
     await Future.wait([
@@ -115,7 +120,11 @@ class LiquidGlassWidgets {
       GlassPerformanceMonitor.start();
     }
 
-    debugPrint('[LiquidGlass] Initialization complete.');
+    GlassLoggers.debugOnly(
+      GlassLoggers.setup,
+      Level.FINE,
+      'Initialization complete',
+    );
   }
 
   // ── wrap() ─────────────────────────────────────────────────────────────────
@@ -252,7 +261,11 @@ class LiquidGlassWidgets {
   /// Skipped on Skia / Web where Impeller is not active.
   static Future<void> _warmUpImpellerPipeline() async {
     if (!ui.ImageFilter.isShaderFilterSupported) {
-      debugPrint('[LiquidGlass] Skipping Impeller warm-up (Skia/Web detected)');
+      GlassLoggers.debugOnly(
+        GlassLoggers.setup,
+        Level.FINE,
+        'Skipping Impeller warm-up (Skia/Web detected)',
+      );
       return;
     }
 
@@ -273,9 +286,19 @@ class LiquidGlassWidgets {
       // Brief delay to allow pipeline compilation to complete.
       await Future.delayed(const Duration(milliseconds: 16));
 
-      debugPrint('[LiquidGlass] ✓ Impeller pipeline warmed up');
-    } catch (e) {
-      debugPrint('[LiquidGlass] Impeller warm-up failed (non-critical): $e');
+      GlassLoggers.debugOnly(
+        GlassLoggers.setup,
+        Level.FINE,
+        'Impeller pipeline warmed up',
+      );
+    } catch (e, stackTrace) {
+      GlassLoggers.debugOnly(
+        GlassLoggers.setup,
+        Level.FINE,
+        'Impeller warm-up failed (non-critical)',
+        e,
+        stackTrace,
+      );
     }
   }
 }

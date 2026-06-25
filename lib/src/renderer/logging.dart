@@ -1,17 +1,20 @@
-// ignore_for_file: avoid_print, lines_longer_than_80_chars
+// ignore_for_file: lines_longer_than_80_chars
 
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:logging/logging.dart';
 import 'package:meta/meta.dart';
+
+import '../../utils/glass_logging.dart';
 
 export 'package:logging/logging.dart' show Level, Logger;
 
 @internal
 abstract class LgrLogNames {
-  static const _root = 'lgr';
+  static const _root = GlassLoggers.rootName;
 
   static const render = '$_root.render';
   static const layer = '$_root.render.layer';
-  static const geometry = '$_root.geometry';
+  static const geometry = '$_root.render.geometry';
 }
 
 /// Logging utilities for the Liquid Glass Renderer package.
@@ -28,7 +31,6 @@ abstract class LgrLogs {
 
     for (final logger in loggers) {
       if (!_activeLoggers.contains(logger)) {
-        print('Initializing logger: ${logger.name}');
         logger
           ..level = level
           ..onRecord.listen(_printLog);
@@ -61,7 +63,6 @@ abstract class LgrLogs {
   static void deactivateLoggers(Set<Logger> loggers) {
     for (final logger in loggers) {
       if (_activeLoggers.contains(logger)) {
-        print('Deactivating logger: ${logger.name}');
         logger.clearListeners();
 
         _activeLoggers.remove(logger);
@@ -69,9 +70,9 @@ abstract class LgrLogs {
     }
   }
 
-  /// Logs a record using a print statement.
+  /// Logs a record through the debug console.
   static void _printLog(LogRecord record) {
-    print(
+    debugPrint(
       '${record.loggerName} > ${record.level.name}: ${record.message}',
     );
   }

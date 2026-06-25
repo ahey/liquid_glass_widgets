@@ -191,6 +191,26 @@ void main() async {
 }
 ```
 
+`liquid_glass_widgets` is silent by default, including in debug builds. To
+inspect internal setup, shader, or renderer diagnostics, opt in with Dart's
+standard `package:logging` pipeline from your app:
+
+```dart
+import 'package:flutter/foundation.dart';
+import 'package:logging/logging.dart';
+
+void enableLiquidGlassLogs() {
+  Logger.root.level = Level.ALL;
+  Logger.root.onRecord.listen((record) {
+    if (record.loggerName.startsWith('lgr')) {
+      debugPrint(
+        '${record.loggerName} ${record.level.name}: ${record.message}',
+      );
+    }
+  });
+}
+```
+
 That's it. Then use `GlassScaffold` on each screen — it handles background, status bar, z-ordering, and edge fading automatically:
 
 ```dart
