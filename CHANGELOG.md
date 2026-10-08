@@ -7,6 +7,7 @@
 ## Bug Fixes
 
 - **Quiet console on startup:** `LiquidGlassWidgets.initialize()` printed its progress, and that the performance monitor had started, to the console in every build mode, and web builds printed a line for every lightweight glass widget's shader. These now go to the developer log under the name `liquid_glass_widgets`, shown in DevTools' Logging view. Warnings and failures still print.
+- **`SheetStateInfo.submergedBottom` reports only the full-state sink:** It was read off the sheet frame's bottom offset, which also drops while a sheet slides in or is swiped away, so content padded by it (as the Apple Mail compose demo does) squeezed upwards through every swipe-to-dismiss. It now reports only how far the full state sinks the sheet's bottom edge below the screen, as documented.
 
 # 1.17.1
 

@@ -826,6 +826,7 @@ class _RenderMetrics {
   final double stretchT;
   final double effectiveHeight;
   final double effectiveBottom;
+  final double submergedBottom;
   final double topRadius;
   final double bottomRadius;
   final double hPad;
@@ -840,6 +841,7 @@ class _RenderMetrics {
     required this.stretchT,
     required this.effectiveHeight,
     required this.effectiveBottom,
+    required this.submergedBottom,
     required this.topRadius,
     required this.bottomRadius,
     required this.hPad,

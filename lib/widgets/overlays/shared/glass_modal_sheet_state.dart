@@ -715,6 +715,10 @@ class _GlassModalSheetState extends State<GlassModalSheet>
 
     late double effectiveHeight;
     late double effectiveBottom;
+    // How far the full state sinks the sheet's bottom edge below the screen;
+    // unlike a negative [effectiveBottom], never the slide of a sheet being
+    // presented or swiped away.
+    double submergedBottom = 0.0;
     late double topRadius;
     late double bottomRadius;
     late double hPad;
@@ -936,6 +940,7 @@ class _GlassModalSheetState extends State<GlassModalSheet>
 
       // Physical height adjusts so the top edge always stays at targetVisualHeight
       effectiveHeight = targetVisualHeight - effectiveBottom;
+      submergedBottom = lerpDouble(0.0, extraHeight, sinkProgress)!;
 
       // Edge to edge at the large detent, except in the strip layout, where
       // natively the sheet keeps its margins.
@@ -964,6 +969,7 @@ class _GlassModalSheetState extends State<GlassModalSheet>
       stretchT: stretchT,
       effectiveHeight: effectiveHeight,
       effectiveBottom: effectiveBottom - dismissOffset,
+      submergedBottom: submergedBottom,
       topRadius: topRadius,
       bottomRadius: bottomRadius,
       hPad: hPad,
@@ -1167,6 +1173,7 @@ class _GlassModalSheetState extends State<GlassModalSheet>
           left: frameInsets?.left ?? metrics.hPad,
           right: frameInsets?.right ?? metrics.hPad,
           effectiveBottom: metrics.effectiveBottom,
+          submergedBottom: metrics.submergedBottom,
           effectiveHeight: metrics.effectiveHeight,
           topRadius: metrics.topRadius,
           bottomRadius: metrics.bottomRadius,
