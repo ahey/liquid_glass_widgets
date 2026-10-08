@@ -1,5 +1,6 @@
 // ignore_for_file: require_trailing_commas
 
+import 'dart:developer' as developer;
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
@@ -401,8 +402,10 @@ class _LightweightLiquidGlassState extends State<LightweightLiquidGlass>
         setState(() {
           _webShader = LightweightLiquidGlass._cachedProgram!.fragmentShader();
           if (!_loggedCreation) {
-            debugPrint(
-                '[LightweightGlass] ✓ Created web shader for ${widget.shape.runtimeType}');
+            developer.log(
+              'Created web shader for ${widget.shape.runtimeType}',
+              name: 'liquid_glass_widgets',
+            );
             _loggedCreation = true;
           }
         });

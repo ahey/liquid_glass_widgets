@@ -4,6 +4,10 @@
 
 - **`GlassModalSheet.fitFullSizeToContent`:** The large detent rests at the measured height of the sheet's content, with `fullSize` (or its default) as the cap, and springs to a new height when the content's changes. Also on `GlassModalSheet.show` and `GlassModalSheetScaffold`. With `detents: {large}` alone the fitted height may sit below `halfSize`, where the sheet keeps its large-detent look; a morphed presentation aims at, and dismisses from, the fitted frame.
 
+## Bug Fixes
+
+- **Quiet console on startup:** `LiquidGlassWidgets.initialize()` printed its progress, and that the performance monitor had started, to the console in every build mode, and web builds printed a line for every lightweight glass widget's shader. These now go to the developer log under the name `liquid_glass_widgets`, shown in DevTools' Logging view. Warnings and failures still print.
+
 # 1.17.1
 
 ## Features

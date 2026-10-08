@@ -74,6 +74,8 @@ await LiquidGlassWidgets.initialize(
 );
 ```
 
+`initialize()` reports its progress to the developer log under the name `liquid_glass_widgets`, shown in DevTools' Logging view, rather than printing to the console your app's own output shares.
+
 > **Using `MaterialApp`?** Add one line so glass widgets honour your `ThemeMode` instead of the raw OS brightness:
 > ```dart
 > runApp(LiquidGlassWidgets.wrap(
