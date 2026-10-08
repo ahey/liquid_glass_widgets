@@ -101,6 +101,51 @@ void main() {
     });
   });
 
+  group('SheetGeometry.positionForState full floor', () {
+    test('a large-only sheet can rest below the half height', () {
+      const geo = SheetGeometry(
+        mode: GlassSheetMode.dismissible,
+        halfSize: 0.45,
+        fullSize: 180,
+        peekSize: 90,
+        enablePeek: false,
+        enableHalf: false,
+      );
+      expect(
+        geo.positionForState(GlassSheetState.full, screen.height),
+        closeTo(180 / screen.height, 0.001),
+      );
+    });
+
+    test('alongside a half detent, full never rests below it', () {
+      const geo = SheetGeometry(
+        mode: GlassSheetMode.dismissible,
+        halfSize: 0.45,
+        fullSize: 180,
+        peekSize: 90,
+        enablePeek: false,
+      );
+      expect(
+        geo.positionForState(GlassSheetState.full, screen.height),
+        closeTo(0.45, 0.001),
+      );
+    });
+
+    test('a large-only sheet with a peek floor never rests below it', () {
+      const geo = SheetGeometry(
+        mode: GlassSheetMode.persistent,
+        halfSize: 0.45,
+        fullSize: 60,
+        peekSize: 90,
+        enableHalf: false,
+      );
+      expect(
+        geo.positionForState(GlassSheetState.full, screen.height),
+        closeTo(90 / screen.height, 0.001),
+      );
+    });
+  });
+
   // ── SheetGeometry.resolveTarget ───────────────────────────────────────────
 
   group('SheetGeometry.resolveTarget', () {

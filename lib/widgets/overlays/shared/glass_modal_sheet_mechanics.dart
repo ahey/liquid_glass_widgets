@@ -366,6 +366,10 @@ class SheetGeometry {
 
   /// Like [positionFor] but applies cascade constraints so snap positions are
   /// always ordered: `hidden ≤ peek ≤ half ≤ full`.
+  ///
+  /// Only the detents the sheet offers bound [GlassSheetState.full] from
+  /// below: without a half detent, a large detent fitted to short content can
+  /// rest below [halfSize].
   double positionForState(GlassSheetState state, double screenHeight) {
     final hiddenPos = positionFor(GlassSheetState.hidden, screenHeight,
         mode: mode, halfSize: halfSize, fullSize: fullSize, peekSize: peekSize);
@@ -379,7 +383,11 @@ class SheetGeometry {
     // Cascade constraint: ensure order hidden <= peek <= half <= full
     final safePeek = peekPos.clamp(hiddenPos, 1.0);
     final safeHalf = halfPos.clamp(safePeek, 1.0);
-    final safeFull = fullPos.clamp(safeHalf, 1.0);
+    final states = orderedStates;
+    final fullFloor = states.contains(GlassSheetState.half)
+        ? safeHalf
+        : (states.contains(GlassSheetState.peek) ? safePeek : hiddenPos);
+    final safeFull = fullPos.clamp(fullFloor, 1.0);
 
     switch (state) {
       case GlassSheetState.hidden:
@@ -567,6 +575,13 @@ class GlassModalSheetController {
   /// over, so a dismissal does not keep sliding the sheet toward the floor
   /// while the morph portal shrinks it back into the trigger.
   void _freezeForMorphClose() => _state?._animationController.stop();
+
+  /// The geometry the attached sheet resolves its detents with, or null while
+  /// no sheet is attached.
+  ///
+  /// Differs from the geometry [GlassModalSheet.show] builds up front once a
+  /// sheet fitted to its content has measured it.
+  SheetGeometry? get _liveGeometry => _state?._geometry;
 }
 
 // ===========================================================================

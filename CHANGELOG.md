@@ -1,3 +1,9 @@
+# Unreleased
+
+## Features
+
+- **`GlassModalSheet.fitFullSizeToContent`:** The large detent rests at the measured height of the sheet's content, with `fullSize` (or its default) as the cap, and springs to a new height when the content's changes. Also on `GlassModalSheet.show` and `GlassModalSheetScaffold`. With `detents: {large}` alone the fitted height may sit below `halfSize`, where the sheet keeps its large-detent look; a morphed presentation aims at, and dismisses from, the fitted frame.
+
 # 1.17.1
 
 ## Features
