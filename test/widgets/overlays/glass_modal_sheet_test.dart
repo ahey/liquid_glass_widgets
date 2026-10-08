@@ -943,6 +943,49 @@ void main() {
       expect(layout, findsAtLeast(1));
     });
 
+    testWidgets(
+        'submergedBottom reports the full-state sink, not a swipe '
+        'that moves the sheet down', (tester) async {
+      final submerged = <double>[];
+      final controller = GlassModalSheetController();
+      await tester.pumpWidget(
+        createTestApp(
+          child: Stack(
+            children: [
+              GlassModalSheet(
+                controller: controller,
+                initialState: GlassSheetState.full,
+                detents: const {GlassSheetDetent.large},
+                // The sink is the bottom corners' radius plus the safe area,
+                // which tests do not have.
+                bottomBorderRadius: 40,
+                child: Builder(
+                  builder: (context) {
+                    submerged.add(
+                      GlassModalSheetStateProvider.of(context)
+                              ?.submergedBottom ??
+                          -1,
+                    );
+                    return const SizedBox(height: 600, child: Text('Probe'));
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final atRest = submerged.last;
+      expect(atRest, greaterThan(0));
+
+      // Partway through a swipe away, the frame's bottom edge is far below
+      // the screen; that slide is not a sink to pad content for.
+      controller.value = controller.value - 0.3;
+      await tester.pump();
+      expect(submerged.last, lessThanOrEqualTo(atRest));
+      await tester.pumpAndSettle();
+    });
+
     group('fitFullSizeToContent', () {
       double screenHeightOf(WidgetTester tester) =>
           tester.view.physicalSize.height / tester.view.devicePixelRatio;
