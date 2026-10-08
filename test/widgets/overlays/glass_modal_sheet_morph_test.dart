@@ -2423,6 +2423,33 @@ void main() {
       expect(find.text('Sheet body'), findsOneWidget);
     });
 
+    testWidgets('a sheet fitted to its content rests unscaled at its height',
+        (tester) async {
+      // The morph is built with the configured large detent before the sheet
+      // has measured anything. Measuring travel from that detent would read a
+      // sheet resting at its fitted height as mid-swipe and shrink it.
+      final anchor = await pumpTrigger(tester);
+      final context = contextOf(tester);
+
+      GlassModalSheet.show<void>(
+        context: context,
+        detents: const {GlassSheetDetent.large},
+        fitFullSizeToContent: true,
+        builder: (_) => const SizedBox(
+          key: Key('fitted-body'),
+          height: 200,
+        ),
+        morphFrom: anchor,
+      );
+      await tester.pumpAndSettle();
+
+      // The route sits above the app's MediaQuery, on the view itself.
+      final view = tester.view.physicalSize / tester.view.devicePixelRatio;
+      final body = tester.getRect(find.byKey(const Key('fitted-body')));
+      expect(body.width, closeTo(view.width, 0.01));
+      expect(body.top, closeTo(view.height - 200, 0.5));
+    });
+
     testWidgets('empties the trigger for the whole morph, then hands it back',
         (tester) async {
       final anchor = await pumpTrigger(tester);

@@ -43,6 +43,13 @@ class _SheetLayout extends StatelessWidget {
   final double dragIndicatorHeight;
   final double dragIndicatorTopPadding;
   final EdgeInsetsGeometry? padding;
+
+  /// The tallest the content is measured at, when the sheet fits its large
+  /// detent to the content; null when it does not.
+  final double? contentHeightCap;
+
+  /// Receives the content's measured height, capped at [contentHeightCap].
+  final ValueChanged<double>? onContentHeightChanged;
   final bool maintainContentGlass;
   final LiquidGlassSettings? fullStateContentSettings;
   final bool enableTopFade;
@@ -89,6 +96,8 @@ class _SheetLayout extends StatelessWidget {
     required this.dragIndicatorHeight,
     required this.dragIndicatorTopPadding,
     this.padding,
+    this.contentHeightCap,
+    this.onContentHeightChanged,
     required this.maintainContentGlass,
     this.fullStateContentSettings,
     required this.enableTopFade,
@@ -118,6 +127,8 @@ class _SheetLayout extends StatelessWidget {
         scrollController: scrollController,
         isFullScreen: contentScrollProgress > _kTopDetentThreshold,
         padding: padding,
+        contentHeightCap: contentHeightCap,
+        onContentHeightChanged: onContentHeightChanged,
         child: child,
       ),
     );
@@ -475,12 +486,16 @@ class _SheetContent extends StatelessWidget {
   final ScrollController scrollController;
   final bool isFullScreen;
   final EdgeInsetsGeometry? padding;
+  final double? contentHeightCap;
+  final ValueChanged<double>? onContentHeightChanged;
 
   const _SheetContent({
     required this.child,
     required this.scrollController,
     required this.isFullScreen,
     this.padding,
+    this.contentHeightCap,
+    this.onContentHeightChanged,
   });
 
   @override
@@ -500,12 +515,109 @@ class _SheetContent extends StatelessWidget {
           parent: ScrollConfiguration.of(context),
           physics: physics,
         ),
-        child: Padding(
-          padding: padding ?? EdgeInsets.zero,
-          child: child,
+        child: _fitted(
+          Padding(
+            padding: padding ?? EdgeInsets.zero,
+            child: child,
+          ),
         ),
       ),
     );
+  }
+
+  Widget _fitted(Widget content) {
+    final cap = contentHeightCap;
+    if (cap == null) return content;
+    return _ContentHeightReporter(
+      maxHeight: cap,
+      onHeightChanged: onContentHeightChanged,
+      child: content,
+    );
+  }
+}
+
+/// Lays its child out at its own height, up to [maxHeight], and reports that
+/// height after the frame, so a sheet can fit its large detent to it.
+///
+/// The reporter itself fills the sheet's frame; the child sits at the top.
+class _ContentHeightReporter extends SingleChildRenderObjectWidget {
+  const _ContentHeightReporter({
+    required this.maxHeight,
+    required this.onHeightChanged,
+    required super.child,
+  });
+
+  final double maxHeight;
+  final ValueChanged<double>? onHeightChanged;
+
+  @override
+  _RenderContentHeightReporter createRenderObject(BuildContext context) =>
+      _RenderContentHeightReporter(
+        maxHeight: maxHeight,
+        onHeightChanged: onHeightChanged,
+      );
+
+  @override
+  void updateRenderObject(
+    BuildContext context,
+    _RenderContentHeightReporter renderObject,
+  ) {
+    renderObject
+      ..maxHeight = maxHeight
+      ..onHeightChanged = onHeightChanged;
+  }
+}
+
+class _RenderContentHeightReporter extends RenderProxyBox {
+  _RenderContentHeightReporter({
+    required double maxHeight,
+    required this.onHeightChanged,
+  }) : _maxHeight = maxHeight;
+
+  /// Height changes smaller than this are layout noise, not new content.
+  static const double _heightEpsilon = 0.5;
+
+  ValueChanged<double>? onHeightChanged;
+  double? _lastReportedHeight;
+
+  double get maxHeight => _maxHeight;
+  double _maxHeight;
+  set maxHeight(double value) {
+    if (_maxHeight == value) return;
+    _maxHeight = value;
+    markNeedsLayout();
+  }
+
+  @override
+  void performLayout() {
+    final cap = math.max(0.0, _maxHeight);
+    double height = 0.0;
+    final child = this.child;
+    if (child != null) {
+      child.layout(
+        BoxConstraints(
+          minWidth: constraints.maxWidth,
+          maxWidth: constraints.maxWidth,
+          maxHeight: cap,
+        ),
+        parentUsesSize: true,
+      );
+      height = math.min(child.size.height, cap);
+    }
+    size = constraints.biggest;
+    _report(height);
+  }
+
+  void _report(double height) {
+    final previous = _lastReportedHeight;
+    if (previous != null && (previous - height).abs() <= _heightEpsilon) {
+      return;
+    }
+    _lastReportedHeight = height;
+    // Layout is no time to rebuild the sheet that is laying this out.
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      onHeightChanged?.call(height);
+    });
   }
 }
 
@@ -757,6 +869,10 @@ class GlassModalSheetScaffold extends StatelessWidget {
   /// Maximum sheet height in 'full' state. If null, defaults to screen height minus 90px.
   final double? fullSize;
 
+  /// Whether the large detent shrinks to the height of [sheet], with
+  /// [fullSize] as the cap. See [GlassModalSheet.fitFullSizeToContent].
+  final bool fitFullSizeToContent;
+
   /// Initial state when the scaffold is first displayed.
   final GlassSheetState initialState;
 
@@ -931,6 +1047,7 @@ class GlassModalSheetScaffold extends StatelessWidget {
     required this.sheet,
     this.halfSize = 0.45,
     this.fullSize,
+    this.fitFullSizeToContent = false,
     this.initialState = GlassSheetState.half,
     this.topBorderRadius,
     this.bottomBorderRadius,
@@ -1012,6 +1129,7 @@ class GlassModalSheetScaffold extends StatelessWidget {
         GlassModalSheet(
           halfSize: halfSize,
           fullSize: fullSize,
+          fitFullSizeToContent: fitFullSizeToContent,
           initialState: initialState,
           topBorderRadius: topBorderRadius,
           bottomBorderRadius: bottomBorderRadius,

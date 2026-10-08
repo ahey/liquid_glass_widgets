@@ -5,6 +5,7 @@ import 'dart:ui';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/physics.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 
@@ -55,6 +56,19 @@ class GlassModalSheet extends StatefulWidget {
   /// - If value > 1.0: Treated as absolute pixels.
   /// - If null: Defaults to screen height minus 90px (iOS Page Sheet style).
   final double? fullSize;
+
+  /// Whether the large detent shrinks to the height of [child].
+  ///
+  /// The sheet measures its content at the width it is laid out at and rests
+  /// at [GlassSheetState.full] with its top edge that far above the bottom of
+  /// the screen, re-snapping when the content's height changes. [fullSize]
+  /// becomes the cap. Content taller than the cap, or content that expands to
+  /// fill the space it is given, such as a scroll view, rests at the cap.
+  ///
+  /// With [detents] of `{large}` alone, the fitted height may sit below
+  /// [halfSize]; alongside [GlassSheetDetent.medium] it is never lower than
+  /// the medium detent. Default: false.
+  final bool fitFullSizeToContent;
 
   /// Minimum visible height in the 'peek' state.
   ///
@@ -265,6 +279,7 @@ class GlassModalSheet extends StatefulWidget {
     required this.child,
     this.halfSize = 0.45,
     this.fullSize,
+    this.fitFullSizeToContent = false,
     this.initialState = GlassSheetState.half,
     this.topBorderRadius = 56,
     this.bottomBorderRadius,
@@ -426,6 +441,7 @@ class GlassModalSheet extends StatefulWidget {
     required WidgetBuilder builder,
     double halfSize = 0.45,
     double? fullSize,
+    bool fitFullSizeToContent = false,
     GlassSheetState initialState = GlassSheetState.half,
     double fillThreshold = 0.60,
     LiquidGlassSettings? settings,
@@ -591,6 +607,7 @@ class GlassModalSheet extends StatefulWidget {
           controller: effectiveController,
           halfSize: halfSize,
           fullSize: fullSize,
+          fitFullSizeToContent: fitFullSizeToContent,
           initialState: resolvedInitialState,
           fillThreshold: fillThreshold,
           settings: settings,
@@ -661,6 +678,8 @@ class GlassModalSheet extends StatefulWidget {
           controller: effectiveController,
           // Built from the same inputs as the sheet's own _buildGeometry, so
           // the droplet aims at the detent the sheet will actually rest at.
+          // A sheet fitted to its content replaces it through the controller
+          // once it has measured the content.
           geometry: SheetGeometry(
             mode: mode,
             halfSize: halfSize,

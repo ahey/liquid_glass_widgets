@@ -78,12 +78,34 @@ This is where you configure the physical shape-shifting "Apple Maps" effect.
 | :--- | :--- | :--- | :--- |
 | `halfSize` | `double` | `0.45` | `(x > 1.0 ? x / screenHeight : x)`. Resolves to absolute pixels if > 1.0, otherwise fraction. |
 | `fullSize` | `double?` | `null` | If `null`, defaults to `(screenHeight - 90) / screenHeight` to mimic iOS system page sheets. |
+| `fitFullSizeToContent` | `bool` | `false` | When true, the large detent rests at the measured height of the content, with `fullSize` (or its default) as the cap. See below. |
 | `peekSize` | `double` | `90.0` | Minimum visible height. `> 1.0` = absolute pixels; `≤ 1.0` = fraction of screen height. In `persistent` mode, this is the floor for all gestures. |
 | `horizontalMargin` | `double` | `8.0` | Base side margin. Lerps to `0.0` during the last 20% of the expansion to `full`. |
 | `peekHorizontalMargin`| `double?` | `null` | If provided, margin lerps from this value to `horizontalMargin` during Peek→Half transition. |
 | `bottomMargin` | `double` | `8.0` | Base bottom margin. In `full` state, lerps to `-extraHeight` to hide the bottom rounded edge. |
 | `peekBottomMargin` | `double?` | `null` | Distance from bottom in Peek state. Allows "Floating Pill" look. |
 | `peekWidth` | `double?` | `null` | If set, `hPad` is calculated as `(screenWidth - peekWidth) / 2`. Morphs to full width on expansion. |
+
+### Fitting the Large Detent to Content
+Set `fitFullSizeToContent: true` and the sheet measures its content at the width it is laid out at, then rests at `GlassSheetState.full` with its top edge that far above the bottom of the screen. `fullSize` becomes the cap: content taller than it, or content that fills the space it is given, such as a `ListView`, rests at the cap.
+
+```dart
+GlassModalSheet.show(
+  context: context,
+  detents: const {GlassSheetDetent.large},
+  fitFullSizeToContent: true,
+  fullSize: 420, // optional cap; defaults to screenHeight - 90
+  builder: (context) => const Column(
+    mainAxisSize: MainAxisSize.min,
+    children: [Text('Compact modal content')],
+  ),
+);
+```
+
+- **Detents.** With `{large}` alone, the fitted height may sit below `halfSize`, and the sheet still wears its large-detent look there: opaque fill, edge to edge, sunk below the screen's bottom edge. Alongside `GlassSheetDetent.medium` it never rests below the medium detent.
+- **Changes.** When the content's height changes, the sheet springs to the new height. The first measurement applies at once, without the spring, and a drag in progress settles against the new height on release.
+- **Bottom edge.** As with any sheet at the large detent, the frame sinks past the screen's bottom edge by `SheetStateInfo.submergedBottom`, and the measured height is the part above the screen's bottom edge. Wrap content in `SafeArea(top: false)` to keep it clear of the home indicator; the safe area is part of the measured height.
+- **Morph.** A sheet presented with `morphFrom` aims the droplet, and measures a swipe-to-dismiss, from the fitted frame once it has measured its content.
 
 ### Corner Rounding (Border Radius)
 *Tip: Null values trigger `GlassThemeHelpers.resolveAdaptiveRadius`, which fetches system-level corner radius values (e.g., iPhone 15 Pro Max = 53.0).*

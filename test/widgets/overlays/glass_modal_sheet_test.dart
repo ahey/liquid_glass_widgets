@@ -943,6 +943,144 @@ void main() {
       expect(layout, findsAtLeast(1));
     });
 
+    group('fitFullSizeToContent', () {
+      double screenHeightOf(WidgetTester tester) =>
+          tester.view.physicalSize.height / tester.view.devicePixelRatio;
+
+      Widget fittedSheet({
+        required GlassModalSheetController controller,
+        required double contentHeight,
+        double? fullSize,
+        Set<GlassSheetDetent> detents = const {GlassSheetDetent.large},
+      }) =>
+          createTestApp(
+            child: Stack(
+              children: [
+                GlassModalSheet(
+                  controller: controller,
+                  initialState: GlassSheetState.full,
+                  detents: detents,
+                  fullSize: fullSize,
+                  fitFullSizeToContent: true,
+                  child: SizedBox(
+                    height: contentHeight,
+                    child: const Text('Fitted'),
+                  ),
+                ),
+              ],
+            ),
+          );
+
+      testWidgets(
+          'a large-only sheet rests at the content height, below half, '
+          'with its large-detent look', (tester) async {
+        final controller = GlassModalSheetController();
+        await tester.pumpWidget(
+          fittedSheet(controller: controller, contentHeight: 160),
+        );
+        await tester.pumpAndSettle();
+
+        final screenHeight = screenHeightOf(tester);
+        expect(controller.currentState, GlassSheetState.full);
+        expect(controller.value, closeTo(160 / screenHeight, 0.001));
+        expect(controller.value, lessThan(0.45));
+        expect(controller.progress, 1.0);
+        expect(
+          tester.getTopLeft(find.text('Fitted')).dy,
+          closeTo(screenHeight - 160, 0.5),
+        );
+      });
+
+      testWidgets('content taller than fullSize rests at fullSize',
+          (tester) async {
+        final controller = GlassModalSheetController();
+        await tester.pumpWidget(
+          fittedSheet(
+            controller: controller,
+            contentHeight: 400,
+            fullSize: 180,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(controller.currentState, GlassSheetState.full);
+        expect(
+          controller.value,
+          closeTo(180 / screenHeightOf(tester), 0.001),
+        );
+      });
+
+      testWidgets('content taller than the screen rests at the default height',
+          (tester) async {
+        final controller = GlassModalSheetController();
+        await tester.pumpWidget(
+          fittedSheet(controller: controller, contentHeight: 5000),
+        );
+        await tester.pumpAndSettle();
+
+        final screenHeight = screenHeightOf(tester);
+        expect(
+          controller.value,
+          closeTo((screenHeight - 90) / screenHeight, 0.001),
+        );
+      });
+
+      testWidgets('re-snaps when the content height changes', (tester) async {
+        final controller = GlassModalSheetController();
+        await tester.pumpWidget(
+          fittedSheet(controller: controller, contentHeight: 120),
+        );
+        await tester.pumpAndSettle();
+        final screenHeight = screenHeightOf(tester);
+        expect(controller.value, closeTo(120 / screenHeight, 0.001));
+
+        await tester.pumpWidget(
+          fittedSheet(controller: controller, contentHeight: 240),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 16));
+        expect(
+          controller.value,
+          lessThan(240 / screenHeight - 0.001),
+          reason: 'a later change animates rather than jumping',
+        );
+
+        await tester.pumpAndSettle();
+        expect(controller.currentState, GlassSheetState.full);
+        expect(controller.value, closeTo(240 / screenHeight, 0.001));
+      });
+
+      testWidgets('alongside a medium detent, full never rests below half',
+          (tester) async {
+        final controller = GlassModalSheetController();
+        await tester.pumpWidget(
+          fittedSheet(
+            controller: controller,
+            contentHeight: 120,
+            detents: const {GlassSheetDetent.medium, GlassSheetDetent.large},
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(controller.currentState, GlassSheetState.full);
+        expect(controller.value, closeTo(0.45, 0.001));
+      });
+
+      testWidgets('a swipe down dismisses from the fitted height',
+          (tester) async {
+        final controller = GlassModalSheetController();
+        await tester.pumpWidget(
+          fittedSheet(controller: controller, contentHeight: 200),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.fling(find.text('Fitted'), const Offset(0, 150), 1500);
+        await tester.pumpAndSettle();
+
+        expect(controller.currentState, GlassSheetState.hidden);
+      });
+    });
+
     testWidgets('prevents size order inversion (foolproof sizes)',
         (tester) async {
       final controller = GlassModalSheetController();

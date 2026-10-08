@@ -34,6 +34,11 @@ class _GlassModalSheetState extends State<GlassModalSheet>
   double _currentPosition = 0.0;
   double _currentEffectiveHeight = 0.0;
 
+  /// The content's height, capped at the large detent's configured height,
+  /// while [GlassModalSheet.fitFullSizeToContent] is on; null until the
+  /// content has been measured.
+  double? _measuredContentHeight;
+
   FrozenState? _frozenState;
   Size _lastPhysicalSize = Size.zero;
 
@@ -136,6 +141,7 @@ class _GlassModalSheetState extends State<GlassModalSheet>
     if (widget.child != oldWidget.child) {
       _contentMetrics = null;
     }
+    if (!widget.fitFullSizeToContent) _measuredContentHeight = null;
 
     final oldGeometry = _geometry;
     _geometry = _buildGeometry();
@@ -189,7 +195,7 @@ class _GlassModalSheetState extends State<GlassModalSheet>
   SheetGeometry _buildGeometry() => SheetGeometry(
         mode: widget.mode,
         halfSize: widget.halfSize,
-        fullSize: widget.fullSize ?? _stripFullSize,
+        fullSize: _fittedFullSize ?? widget.fullSize ?? _stripFullSize,
         peekSize: widget.peekSize,
         enablePeek: SheetGeometry.resolvePeek(
           detents: widget.detents,
@@ -199,6 +205,69 @@ class _GlassModalSheetState extends State<GlassModalSheet>
         enableFull: widget.detents.contains(GlassSheetDetent.large),
         dismissible: widget.dismissible,
       );
+
+  /// The large detent's height fitted to the content, in logical pixels, or
+  /// null where the configured height applies.
+  ///
+  /// [SheetGeometry] reads a size of 1.0 or less as a fraction of the screen,
+  /// so content measured that short leaves the configured height in place.
+  double? get _fittedFullSize {
+    final height = _measuredContentHeight;
+    if (!widget.fitFullSizeToContent || height == null || height <= 1.0) {
+      return null;
+    }
+    return height;
+  }
+
+  /// The tallest the content is measured at: the large detent's configured
+  /// height, which fitting to content can only shrink.
+  double _fullSizeCap(double screenHeight) =>
+      math.max(
+        0.0,
+        SheetGeometry.positionFor(
+          GlassSheetState.full,
+          screenHeight,
+          fullSize: widget.fullSize ?? _stripFullSize,
+        ),
+      ) *
+      screenHeight;
+
+  /// Takes a new content height and moves the sheet to its new rest position:
+  /// at once for the first measurement, so the sheet never shows at the
+  /// configured height, and with the snap spring after that. A drag in
+  /// progress is left alone and settles against the new geometry on release.
+  void _onContentHeightChanged(double height) {
+    if (!mounted || !widget.fitFullSizeToContent) return;
+    final firstMeasurement = _measuredContentHeight == null;
+    final oldGeometry = _geometry;
+    setState(() {
+      _measuredContentHeight = height;
+      _geometry = _buildGeometry();
+    });
+    if (oldGeometry.fullSize == _geometry.fullSize ||
+        _gestureArena.phase != GesturePhase.idle) {
+      return;
+    }
+    _snapToState(_currentState, animate: !firstMeasurement);
+  }
+
+  /// Where the crossfade toward the large detent starts.
+  ///
+  /// The half detent's position, unless the sheet offers no half detent and
+  /// its large detent rests below that height, as one fitted to short content
+  /// can. The expansion then runs up from the detent beneath large, the peek
+  /// floor or hidden, so the sheet still wears its large-detent look at rest.
+  double _expansionStartPos(double screenHeight) {
+    final halfPos =
+        _geometry.positionForState(GlassSheetState.half, screenHeight);
+    if (_geometry.orderedStates.contains(GlassSheetState.half)) return halfPos;
+    final fullPos =
+        _geometry.positionForState(GlassSheetState.full, screenHeight);
+    if (fullPos >= halfPos) return halfPos;
+    return _geometry.enablePeek
+        ? _geometry.positionForState(GlassSheetState.peek, screenHeight)
+        : 0.0;
+  }
 
   /// Coerce [requested] to the nearest detent the sheet actually offers.
   ///
@@ -566,8 +635,7 @@ class _GlassModalSheetState extends State<GlassModalSheet>
     // No full detent → never crossfade toward the opaque full state (an
     // over-drag above half just rubber-bands; it isn't an expansion).
     if (!_geometry.enableFull) return 0.0;
-    final halfPos =
-        _geometry.positionForState(GlassSheetState.half, _screenSize.height);
+    final halfPos = _expansionStartPos(_screenSize.height);
     final fullPos =
         _geometry.positionForState(GlassSheetState.full, _screenSize.height);
     if (fullPos <= halfPos) return 0.0;
@@ -985,8 +1053,9 @@ class _GlassModalSheetState extends State<GlassModalSheet>
       builder: (context, _) {
         final fullPos =
             _geometry.positionForState(GlassSheetState.full, mqHeight);
-        final halfPos =
-            _geometry.positionForState(GlassSheetState.half, mqHeight);
+        // The half detent, or where the expansion to a large detent below it
+        // starts; see [_expansionStartPos].
+        final halfPos = _expansionStartPos(mqHeight);
         final minPos = _geometry.positionForState(_geometry.minState, mqHeight);
 
         double pos = _animationController.value;
@@ -1121,6 +1190,9 @@ class _GlassModalSheetState extends State<GlassModalSheet>
           onPointerUp: _onPointerUp,
           onPointerCancel: _onPointerCancel,
           padding: widget.padding,
+          contentHeightCap:
+              widget.fitFullSizeToContent ? _fullSizeCap(mqHeight) : null,
+          onContentHeightChanged: _onContentHeightChanged,
           scrollController: _scrollController,
           currentStateNotifier: _currentStateNotifier,
           expandProgressValue: t,
