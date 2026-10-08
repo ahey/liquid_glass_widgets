@@ -888,6 +888,10 @@ class GlassSheetMorphPresenter extends StatefulWidget {
 
   /// Detent configuration, shared with the sheet so both resolve the same
   /// resting position.
+  ///
+  /// Stands in until the sheet attaches to [controller]; from then on the
+  /// sheet's own geometry is read instead, which can differ once a sheet
+  /// fitted to its content has measured it.
   final SheetGeometry geometry;
 
   /// Sheet margins and radii, forwarded so the droplet lands on the sheet's
@@ -1159,6 +1163,11 @@ class _GlassSheetMorphPresenterState extends State<GlassSheetMorphPresenter>
     super.dispose();
   }
 
+  /// The sheet's live geometry once it has attached, so the droplet and the
+  /// swipe-away aim at a fitted large detent rather than the default one.
+  SheetGeometry get _geometry =>
+      widget.controller._liveGeometry ?? widget.geometry;
+
   void _bindSheetProgress() {
     if (!mounted) return;
     final progress = widget.controller.progressListenable;
@@ -1265,8 +1274,8 @@ class _GlassSheetMorphPresenterState extends State<GlassSheetMorphPresenter>
     final height = MediaQuery.sizeOf(context).height;
     return SheetMorphGeometry.dismissTravel(
       position: position,
-      minPosition: widget.geometry.positionForState(
-        SheetMorphGeometry.dismissPivotState(widget.geometry),
+      minPosition: _geometry.positionForState(
+        SheetMorphGeometry.dismissPivotState(_geometry),
         height,
       ),
     );
@@ -1279,7 +1288,7 @@ class _GlassSheetMorphPresenterState extends State<GlassSheetMorphPresenter>
   /// already a half-sized (or peek-sized) card by the time it is falling.
   Rect _pivotRect(Size screenSize) => _restingRect(
         screenSize,
-        state: SheetMorphGeometry.dismissPivotState(widget.geometry),
+        state: SheetMorphGeometry.dismissPivotState(_geometry),
       );
 
   /// Layers the swipe-away scale and sideways offset over the real sheet.
@@ -1508,7 +1517,7 @@ class _GlassSheetMorphPresenterState extends State<GlassSheetMorphPresenter>
     final adaptiveRadius = GlassThemeHelpers.resolveAdaptiveRadius(context);
     return SheetMorphGeometry.restingRect(
       state: state ?? widget.restingState,
-      geometry: widget.geometry,
+      geometry: _geometry,
       screenSize: screenSize,
       horizontalMargin: widget.horizontalMargin,
       bottomMargin: widget.bottomMargin,
@@ -1674,7 +1683,7 @@ class _GlassSheetMorphPresenterState extends State<GlassSheetMorphPresenter>
       travelDy: _finalDelta.dy,
     );
 
-    final enablePeek = widget.geometry.enablePeek;
+    final enablePeek = _geometry.enablePeek;
     final baseSettings = GlassThemeHelpers.resolveSettings(
       context,
       explicit: widget.settings,

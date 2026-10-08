@@ -345,6 +345,14 @@ class _ShowcaseHomeScreenState extends State<ShowcaseHomeScreen> {
               onTap: () => _showCustomDimensions(context),
               color: CupertinoColors.activeOrange,
             ),
+            SizedBox(height: 16),
+            _buildScenarioTile(
+              title: 'Large Fits Content',
+              description: 'Large detent sized to compact content',
+              icon: CupertinoIcons.arrow_down_right_arrow_up_left,
+              onTap: () => _showFitContent(context),
+              color: CupertinoColors.activeGreen,
+            ),
           ],
 
           // Peek Scenarios
@@ -894,6 +902,18 @@ class _ShowcaseHomeScreenState extends State<ShowcaseHomeScreen> {
     );
   }
 
+  void _showFitContent(BuildContext context) {
+    GlassModalSheet.show(
+      context: context,
+      quality: widget.currentQuality,
+      detents: const {GlassSheetDetent.large},
+      fitFullSizeToContent: true,
+      fullSize: 420,
+      padding: const EdgeInsets.fromLTRB(20, 44, 20, 24),
+      builder: (context) => const FitContentScenario(),
+    );
+  }
+
   void _showMapsExperience(BuildContext context) {
     Navigator.push(
       context,
@@ -1015,6 +1035,43 @@ class MapsExperienceScreen extends StatelessWidget {
 // =============================================================================
 // Scenario Widgets
 // =============================================================================
+
+/// Compact content for a large detent fitted to it.
+class FitContentScenario extends StatelessWidget {
+  const FitContentScenario({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      top: false,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Large Fits Content',
+            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'The large detent rests at the height of this content instead of '
+            'the page-sheet height, capped at 420pt.',
+            style: TextStyle(fontSize: 15, color: Colors.grey[500]),
+          ),
+          const SizedBox(height: 20),
+          GlassButton.custom(
+            height: 48,
+            width: double.infinity,
+            useOwnLayer: false,
+            shape: const LiquidRoundedSuperellipse(borderRadius: 14),
+            onTap: () => Navigator.of(context).maybePop(),
+            child: const Center(child: Text('Done')),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 /// A unified helper to build scenarios without boilerplate.
 class BaseScenario extends StatefulWidget {
