@@ -348,6 +348,23 @@ void main() {
       });
     });
 
+    testWidgets('initialize() writes nothing to the console', (tester) async {
+      final printed = <String?>[];
+      final originalDebugPrint = debugPrint;
+      debugPrint = (message, {wrapWidth}) => printed.add(message);
+      try {
+        await tester.runAsync(() async {
+          await LiquidGlassWidgets.initialize(enablePerformanceMonitor: true);
+          GlassPerformanceMonitor.stop();
+          GlassPerformanceMonitor.reset();
+        });
+      } finally {
+        debugPrint = originalDebugPrint;
+      }
+
+      expect(printed, isEmpty);
+    });
+
     // ── wrap() + adaptive ────────────────────────────────────────────────────
 
     testWidgets(
