@@ -1,3 +1,5 @@
+import 'dart:developer' as developer;
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'theme/glass_theme.dart';
@@ -105,7 +107,9 @@ class LiquidGlassWidgets {
     bool enablePerformanceMonitor = true,
     GlassWarmUpMode warmUpMode = GlassWarmUpMode.auto,
   }) async {
-    debugPrint('[LiquidGlass] Initializing library...');
+    // Routine progress goes to the developer log (DevTools' Logging view),
+    // not the console an app's own output shares, in every build mode.
+    developer.log('Initializing library', name: 'liquid_glass_widgets');
 
     // 1. Pre-warm shader programs in parallel — fast, async disk I/O only.
     // Loads FragmentProgram objects into RAM so widgets render without
@@ -139,7 +143,7 @@ class LiquidGlassWidgets {
       GlassPerformanceMonitor.start();
     }
 
-    debugPrint('[LiquidGlass] Initialization complete.');
+    developer.log('Initialization complete', name: 'liquid_glass_widgets');
   }
 
   /// Returns `true` if the current platform is statically capped at standard

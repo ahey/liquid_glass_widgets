@@ -23,6 +23,8 @@
 /// ```
 library;
 
+import 'dart:developer' as developer;
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
@@ -86,11 +88,12 @@ class GlassPerformanceMonitor {
     _running = true;
     _consecutiveOverBudget = 0;
     SchedulerBinding.instance.addTimingsCallback(_onFrameTimings);
-    if (kDebugMode) {
-      debugPrint('[LiquidGlass] PerformanceMonitor started '
-          '(budget: ${rasterBudget.inMilliseconds} ms, '
-          'threshold: $sustainedFrameThreshold frames)');
-    }
+    developer.log(
+      'PerformanceMonitor started '
+      '(budget: ${rasterBudget.inMilliseconds} ms, '
+      'threshold: $sustainedFrameThreshold frames)',
+      name: 'liquid_glass_widgets',
+    );
   }
 
   /// Stops the monitor and detaches the frame callback.
