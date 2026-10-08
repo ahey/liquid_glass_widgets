@@ -11,6 +11,7 @@ class _SheetLayout extends StatelessWidget {
   final double left;
   final double right;
   final double effectiveBottom;
+  final double submergedBottom;
   final double effectiveHeight;
   final double topRadius;
   final double bottomRadius;
@@ -68,6 +69,7 @@ class _SheetLayout extends StatelessWidget {
     required this.left,
     required this.right,
     required this.effectiveBottom,
+    required this.submergedBottom,
     required this.effectiveHeight,
     required this.topRadius,
     required this.bottomRadius,
@@ -210,7 +212,7 @@ class _SheetLayout extends StatelessWidget {
                 state: currentStateNotifier.value,
                 progress: expandProgressValue,
                 isExpanded: expandProgressValue > 0.9,
-                submergedBottom: effectiveBottom < 0 ? -effectiveBottom : 0.0,
+                submergedBottom: submergedBottom,
               ),
               child: LiquidStretch(
                 interactionScale: interactionScale,
